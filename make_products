@@ -1,0 +1,284 @@
+#!/usr/bin/python
+
+'''
+
+-- Are there new products waiting to be created?
+	 (Get julian days from the "products not yet created" file that are <= current julian day)
+
+	 For each julian day:
+
+		-> Get year for current day
+
+		-- Products for julian day of current year yet to be created?
+
+			 (Check if files are already in product directories)
+
+			 (After last product for the year is created there will be a window of time
+				before the new year when products to be created list will be reset but
+				no new products should be created until the next year hits --
+				this check accounts for this case)
+
+			 -> Run dodate YYYYDOY
+			 -> Move products over to product directories when finished
+			 -> Remove julian day from list of products to be created
+
+-- Is the products to be created file empty?
+
+	-> Assume new year, reset the file
+'''
+
+import os, os.path, sys, re, datetime, shutil
+import logging
+from subprocess import Popen, PIPE, STDOUT
+
+BASE_PATH = '/fsdata4/forwarn2_products/'
+
+PRODUCTION_PATH = '/fsdata4/forwarn2_products/production'
+
+DODATE_PATH = os.path.join(PRODUCTION_PATH, 'dodate')
+
+TODO_DAYS_PATH = os.path.join(PRODUCTION_PATH, 'todo_product_days')
+
+ALL_DAYS_PATH = os.path.join(PRODUCTION_PATH, 'all_product_days')
+
+
+def padWithZero(num):
+	num = int(num)
+	return str(num) if num > 9 else '0{0}'.format(num)
+
+now = datetime.datetime.now()
+
+month = padWithZero(now.month)
+day = padWithZero(now.day)
+hour = padWithZero(now.hour)
+minute = padWithZero(now.minute)
+second = padWithZero(now.second)
+
+logFilename = 'log_{0}{1}{2}_{3}h{4}m{5}s'.format(now.year, month, day, hour, minute, second)
+logPath = os.path.join(PRODUCTION_PATH, 'logs', logFilename)
+logging.basicConfig(filename=logPath, level=logging.DEBUG)
+
+# If we receive an arg, assume a datestring of the form YYYYDOY
+# In this case assume the script is not being called by cron.
+# Only make products for this date.
+
+if len(sys.argv) > 1:
+	CLI_ARG = sys.argv[1]
+else:
+	CLI_ARG = None
+
+if len(sys.argv) > 2 and sys.argv[2] == "--dryrun":
+	dryrun = True
+else:
+	dryrun = False
+
+
+# keys are where dodate dumps them
+# values are product directories in ForWarn2, ForWarn2_Sqrt
+PRODUCT_DIRS = {
+	'1-yr-max' : 'X_LC_1YEAR',
+	'10-yr-90' : 'X_LC_90_10_YR',
+	'3-yr-max' : 'X_LC_3YEAR',
+	'5-yr-90'  : 'X_LC_5YEAR',
+	'ALC'      : 'X_LC_ALC_1YR',
+	'median-all-yr-max' : 'X_LC_MEDIAN_ALL_YR',
+	'pctprogress' : 'X_LC_PCTPROGRESS'
+}
+
+SOURCE_DIRS = [ 'ForWarn2', 'ForWarn2_Sqrt' ]
+
+def log_subprocess_output(pipe):
+ 	for line in iter(pipe.readline, b''):
+		logging.info('dodate - ' + str(line))
+
+
+def productsExist(d):
+	date = datetime.datetime.strptime(d, '%Y%j')
+	date = date + datetime.timedelta(days=7)
+	date_string = date.strftime('%Y%m%d')
+	
+	for source in SOURCE_DIRS:
+		for key in PRODUCT_DIRS:
+			prod_dir = PRODUCT_DIRS[key]
+			path = os.path.join(BASE_PATH, source, prod_dir)
+			if not os.path.exists(path):
+				continue
+			
+			files = os.listdir(path)
+			files = list(filter(lambda f: date_string in f, files))
+			if not len(files):
+				logging.warn("Product does not exist for date {0} (path: {1})".format(date_string, path))
+				return False
+
+	return True
+
+
+def renamed(filename):
+	m = re.search("(.*)(\d{4})\.(\d{3})(.*)", filename)
+	if m:
+		pieces = list(m.groups())
+		year = '{0}'.format(pieces[1])
+		doy = '{0}'.format(int(pieces[2]) + 7)
+		try:
+			date = datetime.datetime.strptime('{0}{1}'.format(year, doy), '%Y%j')
+			date_string = date.strftime('%Y%m%d')
+		except ValueError as e:
+			logging.error("ValueError trying to make date for file {0}".format(filename, date_string))
+		else:
+			new_pieces = [ pieces[0], date_string, pieces[3] ]
+			new_filename = ''.join(new_pieces)
+			return new_filename
+
+
+def harvest_products(date_string):
+	
+	for key in PRODUCT_DIRS:
+		
+		fw2_check = 'ForWarnLAEA' if key != 'ALC' else 'ALCLAEA'
+		fw2_sqrt_check = 'ForWarn2LAEA' if key != 'ALC' else 'ALC2LAEA'
+		
+		path = os.path.join(PRODUCTION_PATH, key)
+		
+		year = date_string[:4]
+		day = date_string[-3:]
+		
+		files = os.listdir(path)
+		files = list(filter(lambda f: day in f, files))
+		
+		for f in files:
+			if fw2_check in f and year in f:
+				source_dir = 'ForWarn2'
+			elif fw2_sqrt_check in f and year in f:
+				source_dir = 'ForWarn2_Sqrt'
+			else:
+				successful = False
+				continue
+			old_fullpath = os.path.join(path, f)
+			new_fullpath = os.path.join(BASE_PATH, source_dir, PRODUCT_DIRS[key], renamed(f))
+			logging.info("{0}\n --> \n{1}\n".format(old_fullpath, new_fullpath, date_string))
+			if not dryrun:
+				shutil.copyfile(old_fullpath, new_fullpath)
+				os.remove(old_fullpath)
+
+	if dryrun:
+		logging.info("We are in testing mode. No products were moved.")
+
+
+
+def mail_results(success, date_string):
+	day = date_string[-3:]
+	mail_to_addrs = " ".join([
+		"mgeiger@unca.edu",
+		"hnw@geobabble.org",
+		"wchristie@fs.fed.us"
+	
+	])
+
+	dryrun_subject_text = "" if not dryrun else "(DRY RUN)"
+	dryrun_body_text = "" if not dryrun else "NOTE: THIS IS A TEST / DRY RUN AND SHOULD NOT BE CONSIDERED AN ACTUAL RESULT TO A PRODUCT GENERATION ATTEMPT.\n\n"
+
+	if success:
+		subject = "FW2 Day {0} Product Generation {1}".format(day, dryrun_subject_text).rstrip()
+		body_text = "{0}Success! The log should be attached to this email.".format(dryrun_body_text)
+	else:
+		subject = "FAILED: FW2 Day {0} Product Generation {1}".format(day , dryrun_subject_text).rstrip()
+		body_text = "Looks like something went wrong. We'll try again tomorrow. The log should be attached to this email."
+
+	if os.path.exists(logPath):
+		attach_text = "-a {0}".format(logPath)
+	else:
+		attach_text = ""
+
+	mail_command = "echo \"{0}\" | mail {1} -s \"{2}\" {3}".format(
+		body_text, attach_text, subject, mail_to_addrs
+	)
+	exit_status = os.system(mail_command)
+
+
+
+if CLI_ARG:
+	os.chdir(os.path.join(PRODUCTION_PATH))
+	date_string = CLI_ARG
+	if len(date_string) != 7:
+		logging.error("CLI argument should be a datestring of the form YYYYDOY.")
+		sys.exit(1)
+	if not dryrun:
+		try:
+			c = [DODATE_PATH, CLI_ARG]
+			process = Popen(c, stdout=PIPE, stderr=STDOUT)
+			with process.stdout:
+				log_subprocess_output(process.stdout)
+			exitcode = process.wait()
+		except:
+			mail_results(False, date_string)
+			sys.exit()
+	harvest_products(CLI_ARG)
+	if productsExist(date_string):
+		mail_results(True, date_string)
+	else:
+		mail_results(False, date_string)
+
+	sys.exit(0)
+
+
+days = []
+
+with open(TODO_DAYS_PATH) as f:
+	for jd in f:
+		days.append(jd.strip())
+
+if not len(days):
+	# If dates is empty, reset the todo_product_days file
+	os.remove(TODO_DAYS_PATH)
+	os.system('cp {0} {1}'.format(ALL_DAYS_PATH, TODO_DAYS_PATH))
+	sys.exit()
+
+
+today = datetime.datetime.today()
+
+today = today.strftime('%Y%j')
+
+today = datetime.datetime.strptime(today, '%Y%j')
+
+year = today.strftime('%Y')
+
+dates = map(lambda day: datetime.datetime.strptime('{0}{1}'.format(year, day), '%Y%j'), days)
+
+dates = filter(lambda d: d <= today - datetime.timedelta(days=8), dates)
+
+dates = map(lambda d: d.strftime('%Y%j'), dates)
+
+dates = list(dates)
+
+dates = filter(lambda d: not productsExist(d), dates)
+
+if (len(dates) == 0):
+	print "No dates to process!"
+
+os.chdir(os.path.join(PRODUCTION_PATH))
+
+for date_string in dates:
+	day = date_string[-3:]
+	c = [ DODATE_PATH, date_string ]
+	if not dryrun:
+		process = Popen(c, stdout=PIPE, stderr=STDOUT)
+		with process.stdout:
+			log_subprocess_output(process.stdout)
+		exitcode = process.wait()
+		print("Exit status is", exitcode)
+		if exitcode > 0:
+			mail_results(False, date_string)
+			print("Bad exit status, stopping wrapper script...")
+			sys.exit(0)
+	harvest_products(date_string)
+	if productsExist(date_string):
+		days.remove(day)
+		mail_results(True, date_string)
+	else:
+		mail_results(False, date_string)
+
+
+with open(TODO_DAYS_PATH, 'w') as f:
+	for day in days:
+		f.write('{0}\n'.format(day))
+
