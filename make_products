@@ -181,8 +181,6 @@ def mail_results(success, datestring, dryrun, log_path):
   rendered_email = rendered_email.replace('LOG_FILENAME_REPLACE', log_filename)
   rendered_email = rendered_email.replace('ATTACHMENT_CONTENT_REPLACE', log_encoded)
 
-  print(rendered_email)
-
   # Make a temporary file with the contents of the email
   f = NamedTemporaryFile(delete=False)
   f.write(rendered_email)
