@@ -86,9 +86,9 @@
 #################################################################
 #################################################################
 
-ALCpath=/fsdata4/forwarn2_products/production
+ALCpath=/fsdata4/forwarn2_products/forwarn2_build
 
-medianallyrmaxpath=/fsdata4/forwarn2_products/production
+medianallyrmaxpath=/fsdata4/forwarn2_products/forwarn2_build
 
 
 
@@ -219,16 +219,16 @@ done	# checking all subdirs
 echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
 
 # download 26 Terra tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 # unzip all tiles
@@ -256,16 +256,16 @@ if [ "$numtiles" == 0 ]; then
 echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
 
 # download 26 Terra tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
@@ -367,16 +367,16 @@ rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
 # download 26 Terra tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
@@ -401,10 +401,10 @@ else
 echo "Now downloading Terra DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
 # download 26 Terra tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 #################################################################
 
       # did we get 26 nrt Terra tiles this time?
@@ -442,10 +442,10 @@ wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/
 
 echo "Now downloading Aqua DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
@@ -687,16 +687,16 @@ rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
 # download 26 Terra tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 # unzip all tiles

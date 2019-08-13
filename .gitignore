@@ -1,3 +1,14 @@
+
+*.img
+todo_product_days
+1-yr-max/*
+3-yr-max/*
+5-yr-max/*
+ALC/*
+median-all-yr-max/*
+pctprogress/*
+logs/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
