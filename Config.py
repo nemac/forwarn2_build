@@ -1,21 +1,18 @@
 import os.path
 
-# TODO THIS NEEDS TO BE CHANGED BACK TO /fsdata4/forwarn2_products/production FOR PRODUCTION!
-PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/forwarn2_build'
+# Dev
+PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
+MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
 
-DEV_PATH = '/fsdata4/forwarn2_products/forwarn2_build'
+# Prod
+# PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/'
+# MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_prod'
 
-# TODO WE WANT TO SET THIS TO THE ACTUAL PRODUCTION PATH WHEN WE'RE READY
-#PRODUCTION_PATH = '/fsdata4/forwarn2_products/production'
-PRODUCTION_PATH = DEV_PATH
+DODATE_PATH = os.path.join(MAIN_PATH, 'dodate')
 
-MAIN_PATH = DEV_PATH
+TODO_DAYS_PATH = os.path.join(MAIN_PATH, 'todo_product_days')
 
-DODATE_PATH = os.path.join(PRODUCTION_PATH, 'dodate')
-
-TODO_DAYS_PATH = os.path.join(PRODUCTION_PATH, 'todo_product_days')
-
-ALL_DAYS_PATH = os.path.join(PRODUCTION_PATH, 'all_product_days')
+ALL_DAYS_PATH = os.path.join(MAIN_PATH, 'all_product_days')
 
 # keys are where dodate dumps them
 # values are product directories in ForWarn2, ForWarn2_Sqrt
@@ -31,5 +28,7 @@ PRODUCT_DIRS = {
 }
 
 SOURCE_DIRS = [ 'ForWarn2', 'ForWarn2_Sqrt' ]
+
+MAIL_TO_ADDRS_FILE = 'mail_to_addrs.txt'
 
 EMAIL_TEMPLATE_FILE = 'mime_email_template.txt'

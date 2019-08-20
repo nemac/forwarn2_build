@@ -73,6 +73,7 @@ def products_exist(d):
       if not os.path.exists(path):
         continue
       files = os.listdir(path)
+      files = list(filter(lambda f: datestring in f, files))
       if not len(files):
         return False
   return True
@@ -140,19 +141,20 @@ def harvest_products(datestring, dryrun):
         continue
       old_fullpath = os.path.join(path, f)
       new_fullpath = os.path.join(PRODUCTS_BASE_PATH, source_dir, PRODUCT_DIRS[key], renamed(f))
-      logging.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, datestring))
-      shutil.copyfile(old_fullpath, new_fullpath)
+      if os.path.isdir(os.path.join(PRODUCTS_BASE_PATH, source_dir, PRODUCT_DIRS[key])):
+        logging.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, datestring))
+        shutil.copyfile(old_fullpath, new_fullpath)
       os.remove(old_fullpath)
 
 
 def mail_results(success, datestring, dryrun, log_path):
   day = datestring[-3:]
-  mail_to_addrs = [
-    #"nemacmailer@gmail.com"
-    "mgeiger@unca.edu"
-    #"hnw@geobabble.org",
-    #"wchristie@fs.fed.us"
-  ]
+  mail_to_addrs = []
+  with open(MAIL_TO_ADDRS_FILE) as f:
+    for addr in f:
+      mail_to_addrs.append(addr.strip())
+
+  logging.info("Emailing results to: {0}".format(' '.join(mail_to_addrs)))
 
   dryrun_subject_text = "" if not dryrun else "[DRY RUN] "
   dryrun_body_text = "" if not dryrun else "NOTE: This is a test of the ForWarn 2 system. This is not a real production run.\n\n"
