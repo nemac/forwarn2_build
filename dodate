@@ -86,11 +86,11 @@
 #################################################################
 #################################################################
 
-ALCpath=/fsdata4/forwarn2_products/forwarn2_build
+set -vb
 
-medianallyrmaxpath=/fsdata4/forwarn2_products/forwarn2_build
+ALCpath=.
 
-
+medianallyrmaxpath=.
 
 #junk=`date | awk '{print "date -d\""$1" "$2" "$3"\" +%Y%m%d"}' | bash`
 
@@ -286,7 +286,7 @@ gunzip *.gz
 # mosaic together Terra for this DOY
 
 rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$YEAR$DOY*.tif
+gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o "Terra.img"  GMOD09Q1.A$YEAR$DOY*.tif
 echo "done mosaicking Terra images together"
 #rm -f Terra.tif
 #gdal_translate Terra.img -of GTiff Terra.tif
@@ -318,12 +318,13 @@ echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
 
 #find maxval composite of Terra and Aqua
 # and propagate two mask values
-gdal_calc.py -A Terra.img -B Aqua.img --outfile=maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img --calc="\
+gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img --calc="\
 maximum((A<251)*A,(B<251)*B)\
 +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
 +((A==254)|(B==254))*254\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
 rm -f maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
+
 #gdal_translate maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
 #xv maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
 #################################################################
@@ -520,7 +521,7 @@ echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
 
 #find maxval composite of Terra and Aqua
 # and propagate two mask values
-gdal_calc.py -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
+gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
 maximum((A<251)*A,(B<251)*B)\
 +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
 +((A==254)|(B==254))*254\
@@ -564,7 +565,7 @@ echo "YR3 is " $YR3
 # 252 is nodata going in
 # 252 is nodata coming out
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 +((A==254)|(B==254)|(C==254))*254\
 +((A==255)&(B==255)&(C==255))*255\
@@ -589,7 +590,7 @@ rm -f maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.tif
 # 252 is nodata going in
 # 252 is nodata coming out
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 (C<251)*C\
 +((B<251)&(C>250))*B\
 +((A<251)&(B>250)&(C>250))*A\
@@ -747,7 +748,7 @@ echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
 
 #find maxval composite of Terra and Aqua
 # and propagate two mask values
-gdal_calc.py -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
+gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
 maximum((A<251)*A,(B<251)*B)\
 +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
 +((A==254)|(B==254))*254\
@@ -786,7 +787,7 @@ THISYR1=`echo $YRDOY1 | awk -F/ '{print $1-"'$yrsback'"}'`
 # 252 is nodata going in
 # 252 is nodata coming out
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 +((A==254)|(B==254)|(C==254))*254\
 +((A==255)&(B==255)&(C==255))*255\
@@ -835,7 +836,7 @@ rm -f maxMODISmax.$THISYR3.$DOY3.$TYPE.tif
          case $PRODUCT in
          10)
             # generate 90th percentile over prior 10 years
-            gdal_calc.py --calc="\
+            gdal_calc.py --debug --calc="\
 percentile([\
 (A<251)*A,(B<251)*B,(C<251)*C,\
 (D<251)*D,(E<251)*E,(F<251)*F,\
@@ -854,7 +855,7 @@ percentile([\
 
          5)
             # generate 90th percentile over prior 5 years
-            gdal_calc.py --calc="\
+            gdal_calc.py --debug --calc="\
 percentile([\
 (A<251)*A,(B<251)*B,(C<251)*C,\
 (D<251)*D,(E<251)*E\
@@ -871,7 +872,7 @@ percentile([\
 
          3)
             # generate maximum over prior 3 years
-            gdal_calc.py --calc="\
+            gdal_calc.py --debug --calc="\
 maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 +((A==254)|(B==254)|(C==254))*254\
 +((A==255)&(B==255)&(C==255))*255\
@@ -927,7 +928,7 @@ maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 
 echo "Calculating ALC product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
 +((A==254)|(B==254))*0\
@@ -957,7 +958,7 @@ rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
 
 echo "Calculating ALC2 sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
 +((A==254)|(B==254))*0\
@@ -981,7 +982,7 @@ rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
 
 echo "Splitting out two mask categories from ALC product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -994,7 +995,7 @@ echo "Splitting out data from two masks in ALC product ..."
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1025,7 +1026,7 @@ rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
 
 echo "Rejoining ALC product masks with data"
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
@@ -1053,7 +1054,7 @@ rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
 
 echo "Splitting out two mask categories from ALC2 sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1066,7 +1067,7 @@ echo "Splitting out data from two masks in ALC2 sqrt product ..."
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1098,7 +1099,7 @@ echo "Rejoining ALC2 sqrt product masks with data"
 
 # probably gdal_calc assigns 255 as default nodata here
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
@@ -1151,7 +1152,7 @@ rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
 
 echo "Calculating ForWarn product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
 +((A==254)|(B==254))*0\
@@ -1178,7 +1179,7 @@ rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
 
 echo "Calculating ForWarn2 sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
 +((A==254)|(B==254))*0\
@@ -1201,7 +1202,7 @@ rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
 
 echo "Splitting out two mask categories from ForWarn product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1214,7 +1215,7 @@ echo "Splitting out data from two masks in ForWarn product ..."
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1245,7 +1246,7 @@ rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.ti
 
 echo "Rejoining ForWarn product masks with data"
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
@@ -1272,7 +1273,7 @@ rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
 
 echo "Splitting out two mask categories from ForWarn2 sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1285,7 +1286,7 @@ echo "Splitting out data from two masks in ForWarn2 sqrt product ..."
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
@@ -1318,7 +1319,7 @@ echo "Rejoining ForWarn2 sqrt product masks with data"
 
 # probably gdal_calc assigns 255 as default nodata here
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
@@ -1439,10 +1440,10 @@ do
 done
 `
 
-#echo $first
-#echo $second
+echo $first
+echo $second
 
-gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=medianallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
+gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=medianallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
 
 #gdal_translate medianallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff medianallpriormax.$YEAR.$DOY.$TYPE.tif
@@ -1518,7 +1519,7 @@ done
 #echo $first
 #echo $second
 
-gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=90thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
+gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=90thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
 #gdal_translate 90thallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff 90thallpriormax.$YEAR.$DOY.$TYPE.tif
 #rm *.xml
@@ -1594,7 +1595,7 @@ done
 #echo $first
 #echo $second
 
-gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
+gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
 #gdal_translate 10thallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff 10thallpriormax.$YEAR.$DOY.$TYPE.tif
 #rm *.xml
@@ -1607,14 +1608,14 @@ gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YE
 
 #*******************************************************************
 #*******************************************************************
-##### this is an example of the gdal_calc.py code that this code writes ###
+##### this is an example of the gdal_calc.py --debug code that this code writes ###
 #*******************************************************************
 # calculate mean, max, 90th and 50th median baselines over all prior years
 #  for this DOY
 #case $numyrsprior in
    #16)		# 2019 thru P
 #   
-#gdal_calc.py --calc="\
+#gdal_calc.py --debug --calc="\
 #percentile([\
 #(A<251)*A,(B<251)*B,(C<251)*C,\
 #(D<251)*D,(E<251)*E,(F<251)*F,\
@@ -1664,7 +1665,7 @@ gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YE
 #xv medianallpriormax.$YEAR.$DOY.$TYPE.tif
 #
 #
-#gdal_calc.py --calc="\
+#gdal_calc.py --debug --calc="\
 #percentile([\
 #(A<251)*A,(B<251)*B,(C<251)*C,\
 #(D<251)*D,(E<251)*E,(F<251)*F,\
@@ -1714,7 +1715,7 @@ gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YE
 #xv 90thallpriormax.$YEAR.$DOY.$TYPE.tif
 #
 #
-#gdal_calc.py --calc="\
+#gdal_calc.py --debug --calc="\
 #maximum.reduce([\
 #(A<251)*A,(B<251)*B,(C<251)*C,\
 #(D<251)*D,(E<251)*E,(F<251)*F,\
@@ -1764,7 +1765,7 @@ gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YE
 ##xv maxallpriormax.$YEAR.$DOY.$TYPE.tif
 #
 #
-#gdal_calc.py --calc="\
+#gdal_calc.py --debug --calc="\
 #mean([\
 #(A<251)*A,(B<251)*B,(C<251)*C,\
 #(D<251)*D,(E<251)*E,(F<251)*F,\
@@ -1843,7 +1844,7 @@ gdal_calc.py --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YE
 echo "Calculating pctprogress all prior max product ..."
 #(((A.astype(float)-B.astype(float)) / (C.astype(float)-B.astype(float).clip(1)))-1.0)\
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251)&(C<251))*\
 round_(((\
 (A.astype(float)-C.astype(float)) / (C.astype(float)-B.astype(float)).clip(1)\
@@ -1867,7 +1868,7 @@ rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
 echo "Splitting out two mask categories from ForWarn pctprogress product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -1880,7 +1881,7 @@ echo "Splitting out data from two masks in ForWarn pctprogressallpriormax produc
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -1911,7 +1912,7 @@ rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE
 
 echo "Rejoining ForWarn pctprogressallpriormax product masks with data"
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
@@ -1956,7 +1957,7 @@ rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img
 
 echo "Calculating median of allpriormax product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
 +((A==254)&(B==254))*0\
@@ -1975,7 +1976,7 @@ round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).cli
 
 echo "Splitting out two mask categories from ForWarn medianallpriormax product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -1988,7 +1989,7 @@ echo "Splitting out data from two masks in ForWarn medianallpriormax product ...
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -2019,7 +2020,7 @@ rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.
 
 echo "Rejoining ForWarn medianallpriormax product masks with data"
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
@@ -2059,7 +2060,7 @@ rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY
 
 echo "Calculating median of allpriormax sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
 +((A==254)&(B==254))*0\
@@ -2081,7 +2082,7 @@ rm -f ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.t
 
 echo "Splitting out two mask categories from ForWarn medianallpriormax sqrt product ..."
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((A>1)&(A<255))*128\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -2094,7 +2095,7 @@ echo "Splitting out data from two masks in ForWarn medianallpriormax sqrt produc
 
 # use 1 as a fill value
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A>1)&(A<255))*A\
 +((A==0)|(A==255))*1\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
@@ -2125,7 +2126,7 @@ rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR
 
 echo "Rejoining ForWarn medianallpriormax sqrt product masks with data"
 
-gdal_calc.py --calc="\
+gdal_calc.py --debug --calc="\
 ((A==0)|(A==255))*A\
 +((B>1)&(B<255))*B\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite

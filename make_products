@@ -70,7 +70,7 @@ def products_exist(d):
     for key in PRODUCT_DIRS:
       prod_dir = PRODUCT_DIRS[key]
       path = os.path.join(PRODUCTS_BASE_PATH, source, prod_dir)
-      if not os.path.exists(path):
+      if not os.path.exists(path) or (source == 'ForWarn2_Sqrt' and key == 'pctprogress'):
         continue
       files = os.listdir(path)
       files = list(filter(lambda f: datestring in f, files))
@@ -108,6 +108,8 @@ def destroy_test_files():
   logging.info("Destroying test files...\n")
   for src_dir in SOURCE_DIRS:
     for key in PRODUCT_DIRS:
+      if src_dir == 'ForWarn2_Sqrt' and key == 'pctprogress':
+        continue
       prod_dir = PRODUCT_DIRS[key]
       files = [ p for p in os.listdir(os.path.join(MAIN_PATH, src_dir, prod_dir)) if 'TEST' in p ]
       for f in files:
@@ -264,17 +266,18 @@ def build_products(dates, dryrun, is_cli_run, log_path, no_email):
     day = datestring[-3:]
     logging.info("Building ForWarn 2 products for year {0}, julian day {1}...\n".format(datestring[:4], day))
     build_products_for_date(datestring, dryrun, log_path)
+    success = False
     # Only harvest products for cron runs
     if not is_cli_run:
       harvest_products(datestring, dryrun)
       if products_exist(datestring):
+        success = True
         days_to_remove.append(day)
       else:
+        success = False
         logging.error('Products for day {0} did not make it to the destination folder. We\'ll keep {1} in the todo_product_days file, but something probably went gone wrong in the creation scripts. Check the rest of the log for more details.\n'.format(datestring, day))
     if not no_email:
-      mail_results(True, datestring, dryrun, log_path)
-    elif not no_email:
-      mail_results(False, datestring, dryrun, log_path)
+      mail_results(success, datestring, dryrun, log_path)
   if not is_cli_run:
     write_new_todo_days_file(days_to_remove, dryrun)    
   if dryrun:
@@ -326,16 +329,31 @@ def setup_arg_parser():
   return parser
 
 
+def make_running_file(fname):
+  with open(fname, 'a'):
+    os.utime(fname, None)
+
+
 def main():
+  os.chdir(MAIN_PATH)
   parser = setup_arg_parser()
   args = parser.parse_args()
   dryrun = args.dryrun
   is_cli_run = bool(args.date)
   no_email = args.no_email
   log_path = setup_logging(dryrun, is_cli_run)
+  running_fname = 'RUNNING'
+  if os.path.exists(running_fname):
+    logging.error("Looks like another instance of this script is running (there is a file called RUNNING in this folder). We don't want to corrupt any files, so we're exiting now. If you're ABSOLUTELY SURE this is a mistake, delete the file called RUNNING and try again.")
+    sys.exit(1)
+  make_running_file(running_fname)
 
   if is_cli_run:
     if not is_date_argument_ok(args.date):
+      try:
+        os.remove(running_fname)
+      except:
+        pass
       sys.exit(1)
     dates = [ args.date ]
   else:
@@ -344,10 +362,18 @@ def main():
   if not len(dates):
     logging.info('No dates to process. Exiting...\n')
     os.remove(log_path)
+    try:
+      os.remove(running_fname)
+    except:
+      pass
     sys.exit(0)
 
   build_products(dates, dryrun, is_cli_run, log_path, no_email)
-
+  print(os.path.join('.',running_fname))
+  try:
+    os.remove(running_fname)
+  except:
+    pass
 
 if __name__ == '__main__':
   main()
