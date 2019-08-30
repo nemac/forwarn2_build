@@ -190,7 +190,8 @@ def mail_results(success, datestring, dryrun, log_path):
   f.write(rendered_email)
   filename = f.name
   f.close()
-  mail_command = "sendmail -f nemacmailer@gmail.com {0} < {1}".format(' '.join(mail_to_addrs), filename)
+  # Must use full path to sendmail for cron jobs. (Cron is not aware of normal environment variables like $PATH)
+  mail_command = "/usr/sbin/sendmail -f nemacmailer@gmail.com {0} < {1}".format(' '.join(mail_to_addrs), filename)
 
   # Send the email to each recipient in mail_to_addrs
   exit_status = os.system(mail_command)
@@ -369,7 +370,6 @@ def main():
     sys.exit(0)
 
   build_products(dates, dryrun, is_cli_run, log_path, no_email)
-  print(os.path.join('.',running_fname))
   try:
     os.remove(running_fname)
   except:
