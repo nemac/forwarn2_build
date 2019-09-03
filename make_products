@@ -158,11 +158,10 @@ def mail_results(success, datestring, dryrun, log_path):
 
   logging.info("Emailing results to: {0}".format(' '.join(mail_to_addrs)))
 
-  dryrun_subject_text = "" if not dryrun else "[DRY RUN] "
-  dryrun_body_text = "" if not dryrun else "NOTE: This is a test of the ForWarn 2 system. This is not a real production run.\n\n"
+  dryrun_body_text = "" if not dryrun else "NOTE: THIS IS A TEST OF THE FORWARN 2 SYSTEM!"
 
   if success:
-    subject_text = "{0}FW2 Day {1} Product Generation".format(dryrun_subject_text, day).rstrip()
+    subject_text = "FW2 Day {1} Product Generation".format(day).rstrip()
     body_text = "{0}Success! The log is attached to this email.".format(dryrun_body_text)
   else:
     subject_text = "{0}FAILED: FW2 Day Product Generation {1}".format(dryrun_subject_text, day).rstrip()
@@ -277,6 +276,10 @@ def build_products(dates, dryrun, is_cli_run, log_path, no_email):
       else:
         success = False
         logging.error('Products for day {0} did not make it to the destination folder. We\'ll keep {1} in the todo_product_days file, but something probably went gone wrong in the creation scripts. Check the rest of the log for more details.\n'.format(datestring, day))
+    else:
+      # We're running a CLI run for a specific date.
+      # Defaulting to true for now
+      success = True
     if not no_email:
       mail_results(success, datestring, dryrun, log_path)
   if not is_cli_run:
