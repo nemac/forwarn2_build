@@ -5,6 +5,7 @@ files=$(ls *.img)
 for f in $files
 do
   filename=${f%%\.img}
-  #gdal_translate -co COMPRESS=DEFLATE -of netCDF $f ${filename}.unscaled.nc
-  ./rescale_max.sh ${filename}.img ${filename}.nc
+  ./rescale_max.sh ${filename}.img ${filename}.rescaled.img
+  gdal_translate -stats -co "COMPRESS=DEFLATE" -of netCDF ${filename}.rescaled.img ${filename}.nc
+  rm ${filename}.rescaled.img
 done

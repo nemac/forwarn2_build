@@ -22,9 +22,7 @@ NODATA=255
 gdal_calc.py \
   -A $IN_FILE \
   --outfile=$OUT_FILE \
-  --allBands=A \
   --type=Byte \
-  --format=NetCDF \
-  --co="COMPRESS=DEFLATE" \
-  --calc="(A>=251)*255+(A<251)*((100*A)/250)" \
-  --NoDataValue=$NODATA
+  --calc="(A>=251)*255+(A<251)*(100.0*A/250.0)" \
+  --NoDataValue=$NODATA \
+  --debug

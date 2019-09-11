@@ -28,7 +28,7 @@
 import os, os.path, sys, re, datetime, shutil
 import logging
 import argparse
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, check_output
 from tempfile import NamedTemporaryFile
 
 from Config import *
@@ -158,14 +158,14 @@ def mail_results(success, datestring, dryrun, log_path):
 
   logging.info("Emailing results to: {0}".format(' '.join(mail_to_addrs)))
 
-  dryrun_body_text = "" if not dryrun else "NOTE: THIS IS A TEST OF THE FORWARN 2 SYSTEM!"
+  dryrun_body_text = "" if not dryrun else "NOTE: THIS IS A TEST OF THE FORWARN 2 SYSTEM!\n\n"
 
   if success:
-    subject_text = "FW2 Day {1} Product Generation".format(day).rstrip()
+    subject_text = "FW2 Day {0} Product Generation".format(day).rstrip()
     body_text = "{0}Success! The log is attached to this email.".format(dryrun_body_text)
   else:
-    subject_text = "{0}FAILED: FW2 Day Product Generation {1}".format(dryrun_subject_text, day).rstrip()
-    body_text = "Looks like something went wrong. We'll try again and send another notification email."
+    subject_text = "FAILED: FW2 Day Product Generation {0}".format(day).rstrip()
+    body_text = "{0}Looks like something went wrong. We'll try again and send another notification email.".format(dryrun_body_text)
 
   # Read the log file and encode as base64
   with open(log_path) as f:
@@ -333,10 +333,20 @@ def setup_arg_parser():
   return parser
 
 
-def make_running_file(fname):
-  with open(fname, 'a'):
-    os.utime(fname, None)
 
+def check_is_only_instance_or_quit():
+  name_of_this_script = sys.argv[0].split('/').pop()
+  command = "ps -aux | grep %s" % name_of_this_script
+  stdout = check_output(command, shell=True)
+  lines = stdout.split('\n')
+  # Remove empty strings made from the split command
+  # Remove entries related to the grep command run as part of the process
+  lines = [ line for line in lines if line != '' and 'grep' not in line ]
+  if (len(lines) > 1):
+    # One entry refers to this instance of the script.
+    # More than one entry means there is another instance of the script running.
+    logging.info("Another instance of %s is already running. Exiting..." % name_of_this_script)
+    sys.exit() 
 
 def main():
   os.chdir(MAIN_PATH)
@@ -346,18 +356,10 @@ def main():
   is_cli_run = bool(args.date)
   no_email = args.no_email
   log_path = setup_logging(dryrun, is_cli_run)
-  running_fname = 'RUNNING'
-  if os.path.exists(running_fname):
-    logging.error("Looks like another instance of this script is running (there is a file called RUNNING in this folder). We don't want to corrupt any files, so we're exiting now. If you're ABSOLUTELY SURE this is a mistake, delete the file called RUNNING and try again.")
-    sys.exit(1)
-  make_running_file(running_fname)
+  check_is_only_instance_or_quit()
 
   if is_cli_run:
     if not is_date_argument_ok(args.date):
-      try:
-        os.remove(running_fname)
-      except:
-        pass
       sys.exit(1)
     dates = [ args.date ]
   else:
@@ -366,17 +368,9 @@ def main():
   if not len(dates):
     logging.info('No dates to process. Exiting...\n')
     os.remove(log_path)
-    try:
-      os.remove(running_fname)
-    except:
-      pass
     sys.exit(0)
 
   build_products(dates, dryrun, is_cli_run, log_path, no_email)
-  try:
-    os.remove(running_fname)
-  except:
-    pass
 
 if __name__ == '__main__':
   main()
