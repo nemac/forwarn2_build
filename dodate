@@ -477,6 +477,7 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/
       echo "This is NOT GONNA WORK!"
       echo "Could not get all tiles for Terra or Aqua " $PASTYR $PASTDOY 
       echo "Tried both std and nrt for EACH!"
+      exit 1
    fi
 
 fi	# 52 std Tiles
