@@ -333,7 +333,6 @@ def setup_arg_parser():
   return parser
 
 
-
 def check_is_only_instance_or_quit():
   name_of_this_script = sys.argv[0].split('/').pop()
   command = "ps -aux | grep %s" % name_of_this_script
@@ -347,6 +346,7 @@ def check_is_only_instance_or_quit():
     # More than one entry means there is another instance of the script running.
     logging.info("Another instance of %s is already running. Exiting..." % name_of_this_script)
     sys.exit() 
+
 
 def main():
   os.chdir(MAIN_PATH)
