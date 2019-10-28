@@ -84,6 +84,7 @@ def setup_arg_parser():
 
 
 def main():
+  os.chdir(MAIN_PATH)
   parser = setup_arg_parser()
   args = parser.parse_args()
   dryrun = args.dryrun
