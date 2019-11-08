@@ -56,8 +56,9 @@ def get_date_nc(prod_type, date, dryrun):
   prod_dir = get_8day_prod_dir(prod_type)
   if not max_file_exists(prod_type, date):
     logging.info("Creating {} netcdf for {}".format(prod_type, date))
-    os.system('./get_date_netcdf.sh {} {} {}'.format(prod_type, year, doy))
-    os.system('mv maxMODIS.{}.{}.{}.nc {}'.format(year, doy, prod_type, prod_dir))
+    if not dryrun:
+      os.system('./get_date_netcdf.sh {} {} {}'.format(prod_type, year, doy))
+      os.system('mv maxMODIS.{}.{}.{}.nc {}'.format(year, doy, prod_type, prod_dir))
   else:
     logging.info("File already exists. Skipping...")
 
