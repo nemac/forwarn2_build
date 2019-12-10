@@ -3,7 +3,7 @@
 import os, sys, os.path, datetime, argparse, logging
 from Config import *
 from make_year_nc import make_netcdf
-
+from subprocess import check_output
 
 def pad_with_zero(num):
   num = int(num)
@@ -83,6 +83,19 @@ def setup_arg_parser():
   parser.add_argument('--dryrun', action='store_true')
   return parser
 
+def check_is_only_instance_or_quit():
+  name_of_this_script = sys.argv[0].split('/').pop()
+  command = "ps -aux | grep %s" % name_of_this_script
+  stdout = check_output(command, shell=True)
+  lines = stdout.split('\n')
+  # Remove empty strings made from the split command
+  # Remove entries related to the grep command run as part of the process
+  lines = [ line for line in lines if line != '' and 'grep' not in line ]
+  if (len(lines) > 1):
+    # One entry refers to this instance of the script.
+    # More than one entry means there is another instance of the script running.
+    logging.info("Another instance of %s is already running. Exiting..." % name_of_this_script)
+    sys.exit()
 
 def main():
   os.chdir(MAIN_PATH)
@@ -90,6 +103,7 @@ def main():
   args = parser.parse_args()
   dryrun = args.dryrun
   setup_logging()
+  check_is_only_instance_or_quit()
   # Get possible todo days
   todo_dates = get_todo_dates()
   new_stds = []
