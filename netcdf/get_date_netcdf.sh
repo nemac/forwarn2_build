@@ -45,20 +45,20 @@ gunzip *.gz
 #################################################################
 # mosaic together Terra for this DOY
 
-rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o "Terra.img"  GMOD09Q1.A$YEAR$DOY*.tif
+rm -f Terra.tif
+gdal_merge.py -v -init 255 -of GTiff -o "Terra.tif"  GMOD09Q1.A$YEAR$DOY*.tif
 echo "done mosaicking Terra images together"
 #rm -f Terra.tif
-#gdal_translate Terra.img -of GTiff Terra.tif
+#gdal_translate Terra.tif -of GTiff Terra.tif
 #xv Terra.tif
 
 # mosaic together Aqua for this DOY
 
-rm -f Aqua.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$YEAR$DOY.*.tif
+rm -f Aqua.tif
+gdal_merge.py -v -init 255 -of GTiff -o Aqua.tif  GMYD09Q1.A$YEAR$DOY.*.tif
 echo "done mosaicking Aqua images together"
 #rm -f Aqua.tif
-#gdal_translate Aqua.img -of GTiff Aqua.tif
+#gdal_translate Aqua.tif -of GTiff Aqua.tif
 #xv Aqua.tif
 
 #################################################################
@@ -80,19 +80,16 @@ OUTFILE=maxMODIS.$YEAR.$DOY.$DATETYPE
 
 #find maxval composite of Terra and Aqua
 # and propagate two mask values
-gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=${OUTFILE}.img --calc="\
+gdal_calc.py --debug -A Terra.tif -B Aqua.tif --outfile=${OUTFILE}.unscaled.tif --calc="\
 maximum((A<251)*A,(B<251)*B)\
 +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
 +((A==254)|(B==254))*254\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
+" --format=GTiff --NoDataValue=252 --type=Byte --overwrite
 
 rm -f maxMODIS.$YEAR.$DOY.$DATETYPE.tif
-rm -f Aqua.img
-rm -f Terra.img
+rm -f Aqua.tif
+rm -f Terra.tif
 
-./rescale_max.sh ${OUTFILE}.img ${OUTFILE}.rescaled.img
+./rescale_max.sh ${OUTFILE}.unscaled.tif ${OUTFILE}.tif
 
-gdal_translate -stats -co "COMPRESS=DEFLATE" -of netCDF ${OUTFILE}.rescaled.img ${OUTFILE}.nc
-
-rm -f ${OUTFILE}.img
-rm -f ${OUTFILE}.rescaled.img
+rm ${OUTFILE}.unscaled.tif

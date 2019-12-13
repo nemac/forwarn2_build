@@ -25,4 +25,5 @@ gdal_calc.py \
   --type=Byte \
   --calc="(A>=251)*255+(A<251)*(100.0*A/250.0)" \
   --NoDataValue=$NODATA \
-  --debug
+  --debug \
+  --co="COMPRESS=LZW"
