@@ -1,4 +1,5 @@
 from braceexpand import braceexpand
+from datetime import datetime
 import os, wget, gzip, shutil
 
 def get_terra_and_aqua_list(type, year, dayofyear):
@@ -22,24 +23,35 @@ def get_terra_and_aqua_list(type, year, dayofyear):
 
 def download_and_extract(type, year, dayofyear):
   listOfGzipFiles = []
-  destinationDirectory = './netcdf_test_dir/'
+  destinationDirectory = './'
+  #destinationDirectory = './netcdf_test_dir/'
   list = get_terra_and_aqua_list(type, year, dayofyear)
-  wget.download('https://gimms.gsfc.nasa.gov/MODIS/std/GMOD09Q1/tif/NDVI/2019/001/GMOD09Q1.A2019001.08d.latlon.x00y09.6v1.NDVI.tif.gz', './netcdf_test_dir') # this is a test wget
-  #for i in list:
-  #  wget.download(i, destinationDirectory)
-  for i in (os.listdir(destinationDirectory)): # find all the files we just downloaded previously
-    listOfGzipFiles.append(i)
-  for i in listOfGzipFiles:
+  print ('Begin time download 52 tif.gz: ' + str(datetime.now()))
+  for i in list:
+    wget.download(i, destinationDirectory)
+    listOfGzipFiles.append(i.split('/')[-1]) # Grabs just the .gz file and not the whole directory
+  print ('End time download 52 tif.gz: ' + str(datetime.now()))
+  print ('Begin time download extract 52 tif.gz: ' + str(datetime.now()))
+  for i in (listOfGzipFiles):
     tifFile = i.strip('.gz')
-    with gzip.open(destinationDirectory + i, 'r') as f_in, open(destinationDirectory + tifFile, 'wb') as f_out: #open('./netcdf_test_dir/{}'.format(i).strip('.gz'), 'wb') as f_out:
+    with gzip.open(destinationDirectory + i, 'r') as f_in, open(destinationDirectory + tifFile, 'wb') as f_out:
       shutil.copyfileobj(f_in, f_out)
     os.remove(destinationDirectory + i)
+  print ('End time download extract 52 tif.gz: ' + str(datetime.now()))
 
-#def merge_terra_and_aqua_tif():
-#  os.system('python3 gdal_merge')
+def merge_terra_and_aqua_tif(year, dayofyear):
+  print ('Begin time merge terra: ' + str(datetime.now()))
+  os.system('gdal_merge.py -v -init 255 -of GTiff -o "Terra.tif"  GMOD09Q1.A$year$dayofyear*.tif')
+  print ('End time merge terra: ' + str(datetime.now()))
+  print ('Begin time merge aqua: ' + str(datetime.now()))
+  os.system('gdal_merge.py -v -init 255 -of GTiff -o Aqua.tif  GMYD09Q1.A$year$dayofyear.*.tif')
+  print ('End time merge aqua: ' + str(datetime.now()))
 
 def main():
+  print ('Begin time program: ' + str(datetime.now()))
   download_and_extract('std', '2019', '001')
+  merge_terra_and_aqua_tif('2019', '001')
+  print ('End time program: ' + str(datetime.now()))
 
 if __name__ == '__main__':
   main()
