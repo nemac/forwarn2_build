@@ -92,4 +92,5 @@ rm -f Terra.tif
 
 ./rescale_max.sh ${OUTFILE}.unscaled.tif ${OUTFILE}.tif
 
+aws s3 cp ${OUTFILE}.tif s3://forwarn2-max-modis-tifs/$YEAR/${OUTFILE}.tif
 rm ${OUTFILE}.unscaled.tif
