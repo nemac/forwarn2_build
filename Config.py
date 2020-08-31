@@ -1,12 +1,12 @@
 import os.path
 
 # Dev
-PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
-MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
+#PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
+#MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_dev'
 
 # Prod
-# PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products/'
-# MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_prod'
+PRODUCTS_BASE_PATH = '/fsdata4/forwarn2_products'
+MAIN_PATH = '/fsdata4/forwarn2_products/forwarn2_build_prod'
 
 DODATE_PATH = os.path.join(MAIN_PATH, 'dodate')
 
