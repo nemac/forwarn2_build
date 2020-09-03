@@ -225,10 +225,18 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+# TEMP FIX
+#  Make "fake" Aqua tiles by copying Terra 
+find . -name "GMOD09Q1.A$YEAR$DOY.08d.latlon.x*y*.6v1.NDVI.tif.gz" -exec bash -c 'cp $0 $(echo $0 | sed s/GMO/GMY/g)' {} \;
+
+
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+
 
 #################################################################
 # unzip all tiles
@@ -262,10 +270,13 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+#  Make "fake" Aqua tiles by copying Terra tiles
+find . -name "GMOD09Q1.A$YEAR$DOY.08d.latlon.x*y*.6v1.NDVI.tif.gz" -exec bash -c 'cp $0 $(echo $0 | sed s/GMO/GMY/g)' {} \;
+
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
@@ -373,11 +384,16 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
+# TEMP FIX
+#  Make "fake" Aqua tiles by copying Terra 
+find . -name "GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x*y*.6v1.NDVI.tif.gz" -exec bash -c 'cp $0 $(echo $0 | sed s/GMO/GMY/g)' {} \;
+
+
 # download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
@@ -406,6 +422,7 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
 wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
 #################################################################
 
       # did we get 26 nrt Terra tiles this time?
@@ -443,10 +460,14 @@ wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/
 
 echo "Now downloading Aqua DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+# TEMP FIX
+#  Make "fake" Aqua tiles by copying Terra 
+find . -name "GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x*y*.6v1.NDVI.tif.gz" -exec bash -c 'cp $0 $(echo $0 | sed s/GMO/GMY/g)' {} \;
+
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+#wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
 #################################################################
 
