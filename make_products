@@ -211,7 +211,7 @@ def get_all_todo_days():
   return days
 
 
-def get_todo_dates():
+def get_todo_dates(overwrite):
   days = get_all_todo_days()
   # TODO: test this!
   if not len(days):
@@ -224,7 +224,8 @@ def get_todo_dates():
   dates = filter(lambda d: d <= today - datetime.timedelta(days=8), dates)
   dates = map(lambda d: d.strftime('%Y%j'), dates)
   dates = list(dates)
-  dates = filter(lambda d: not products_exist(d), dates)
+  if not overwrite:
+    dates = filter(lambda d: not products_exist(d), dates)
   return dates
 
 
@@ -327,6 +328,7 @@ def is_date_argument_ok(arg):
 
 def setup_arg_parser():
   parser = argparse.ArgumentParser()
+  parser.add_argument('--overwrite', action='store_true', help='Overwrite existing products. Use at your own risk!')
   parser.add_argument('--dryrun', action='store_true', help='Run this script without actually building any products. Useful for testing.')
   parser.add_argument('-d', '--date', help='Build products for a certain date. This argument must be of the form YYYYDOY, where the first four numbers represent a year and the last three numbers are a julian day, padded with zeroes if necessary. For example, to make a 2017 product for the second julian day of the year, this argument would be 2017002.')
   parser.add_argument('--no_email', action='store_true', help='Do not send email notifications. Useful for testing.')
@@ -352,6 +354,7 @@ def main():
   os.chdir(MAIN_PATH)
   parser = setup_arg_parser()
   args = parser.parse_args()
+  overwrite = args.overwrite
   dryrun = args.dryrun
   is_cli_run = bool(args.date)
   no_email = args.no_email
@@ -363,7 +366,7 @@ def main():
       sys.exit(1)
     dates = [ args.date ]
   else:
-    dates = get_todo_dates()
+    dates = get_todo_dates(overwrite)
 
   if not len(dates):
     logging.info('No dates to process. Exiting...\n')
