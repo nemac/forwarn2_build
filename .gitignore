@@ -119,3 +119,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+ForWarn2
+ForWarn2_Sqrt
+precursors

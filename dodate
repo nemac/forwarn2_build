@@ -1,28 +1,48 @@
 #!/bin/bash
 
-# Usage:  ./dodate 2018153
-# First command line argument is the desired date for product generation
-
-
-# Types of Intermediate Files, by filename
+##################################################################
+##################################################################
+# 
+#             ForWarn 2 Production Script
+#
+##################################################################
+##################################################################
+#
+# Maintained By: NEMAC Development Team (nemac@unca.edu)
+#
+# Arguments: 
+#   datestring - a string of the form YYYYJJJ, where
+#     YYYY is a year and JJJ is a zero-padded julian day (day of the year).
+#
+# Example: ./dodate 2019009
+# 
+# Summary: Builds a set of MODIS-based ForWarn 2 products.
+#   See all_product_days in this folder for all possible combinations of JJJ.
+#
+# Data Source: https://gimms.gsfc.nasa.gov/MODIS/
+#
+#################################################################
+#################################################################
+#
+# Summary of All Precursors
 #
 # from distal to proximal
 #  in order of dependency, from the bottom up
 #
-# meanallpriormax.*	mean over all prior years, over 3 dates, over 2 sensors
-# sumallpriormax.*	sum over all prior years, over 3 dates, over 2 sensors
-# maxallpriormax.*		max over all prior years, over 3 dates, over 2 sensors
+# meanallpriormax.* mean over all prior years, over 3 dates, over 2 sensors
+# sumallpriormax.*  sum over all prior years, over 3 dates, over 2 sensors
+# maxallpriormax.*    max over all prior years, over 3 dates, over 2 sensors
 #  above is for all prior year products
-# maxMODISmaxmax.*	max over all prior years, over 3 dates, over 2 sensors
+# maxMODISmaxmax.*  max over all prior years, over 3 dates, over 2 sensors
 #  above is for 1-, 3-, and 5-year products
-#  .std			all 3 dates are from std products
-#  .nrt			first 2 dates are from std, third date is nrt
-# maxMODISalc.*		max over 3 dates, recent priority, over 2 sensors
-# maxMODISmax.*		max over 3 dates, over 2 sensors
-# maxMODIS.*		max over 2 sensors, for one date
-
-
+#  .std     all 3 dates are from std products
+#  .nrt     first 2 dates are from std, third date is nrt
+# maxMODISalc.*   max over 3 dates, recent priority, over 2 sensors
+# maxMODISmax.*   max over 3 dates, over 2 sensors
+# maxMODIS.*    max over 2 sensors, for one date
+#
 #################################################################
+#
 # Precursor Intermediate Files Needed for making 1-, 3-, and 5-year Products
 #
 # maxMODIS nrt DOY3
@@ -36,15 +56,16 @@
 # maxMODIS std max over each of 3 DOYs in the prior year
 #
 # * = files should already exist
-
+#
 # use cp command something like this
 #  cp /media/disk/fullwrapper2/maxMODISmaxmax.[135]-yr-baseline.201[76543].DOY.std.img .
 #  cp /media/disk/fullwrapper2/maxMODISmax.201[76543].DOY.std.img .
 #  cp /media/disk/fullwrapper2/maxMODIS.2017.0[876][135].std.img .
 #
 # harvest back the ?
-
+#
 #################################################################
+#
 # Precursor Intermediate Files Needed for making all prior year Products
 #
 # maxallpriormax.*.DOY.std.img for this DOY for as recent a year as possible*
@@ -55,14 +76,15 @@
 #   the year of the latest available maxallpriormax file*
 # 
 # * = files should already exist
-
+#
 # use cp command something like this
 #  cp /media/disk/fullwrapper2/maxallpriormax.*.DOY.std.img .
 #  cp /media/disk/fullwrapper2/maxMODISmax.201[76543].081.std.img .
 #
 # harvest back the maxallpriormax std file that is made for this DOY
-
+#
 #################################################################
+#
 # Precursor Intermediate Files Needed for making Mean all prior year Products
 #
 # countallpriormax std for this DOY for as recent a year as possible*
@@ -74,249 +96,221 @@
 #   the year of the latest available countallpriormax and sumallpriormax files*
 #
 # * = files should already exist
-
+#
 # use cp command something like this
 #  cp /media/disk/fullwrapper2/countallpriormax.*.DOY.std.img .
 #  cp /media/disk/fullwrapper2/sumallpriormax.*.DOY.std.img .
 #  cp /media/disk/fullwrapper2/maxMODISmax.201[76543].081.std.img .
 #
 # harvest back the countallpriormax and sumallpriormax files that are made for this DOY 
-
+#
+#
 
 #################################################################
+#
+#                   SCRIPT STARTS NOW
+#
 #################################################################
 
+##
+# Init 
+
+# Report the status of terminated background jobs immediately,
+# rather than before the next primary prompt. This is effective
+# only when job control is enabled.
 set -b
 
+# Paths to precursors
 ALCpath=.
-
 medianallyrmaxpath=.
 
-#junk=`date | awk '{print "date -d\""$1" "$2" "$3"\" +%Y%m%d"}' | bash`
-
-#datedayofyear=`echo $junk | cut -c5-8`
-#YEAR=`echo $junk | cut -c1-4`
-
-#echo "Current date is " $YEAR $datedayofyear
-
-# this code finds the earliest just-passed interval DOY from the current date
-#for INTERVALs in 361/353/345 353/345/337 345/337/329 337/329/321 329/321/313 321/313/305 313/305/297 305/297/289 297/289/281 289/281/273 281/273/265 273/265/257 265/257/249 257/249/241 249/241/233 241/233/225 233/225/217 225/217/209 217/209/201 209/201/193 201/193/185 193/185/177 185/177/169 177/169/161 169/161/153 161/153/145 153/145/137 145/137/129 137/129/121 129/121/113 121/113/105 113/105/097 105/097/089 097/089/081 089/081/073 081/073/065 073/065/057 065/057/049 057/049/041 049/041/033 041/033/025 033/025/017 025/017/009 017/009/001 009/001/361 001/361/353
-#do
-
-#DOY=`echo $INTERVALs | awk -F/ '{print $1}'`
-##echo $DOY $datedayofyear
-#if [ $DOY -le $datedayofyear ]
-  #then break
-#fi
-
-#done
-#################################################################
-# command line argument should be desired date in the format 2018001
-
+# Extract the year and julian day from the datestring argument.
 YEAR=`echo $1 | cut -c1-4`
 DOYWANTED=`echo $1 | cut -c5-7`
 
-# this code finds the three dates involved in this interval
+# Find the desired day of year (DOY) and three-day interval.
 for INTERVALs in 361/353/345 353/345/337 345/337/329 337/329/321 329/321/313 321/313/305 313/305/297 305/297/289 297/289/281 289/281/273 281/273/265 273/265/257 265/257/249 257/249/241 249/241/233 241/233/225 233/225/217 225/217/209 217/209/201 209/201/193 201/193/185 193/185/177 185/177/169 177/169/161 169/161/153 161/153/145 153/145/137 145/137/129 137/129/121 129/121/113 121/113/105 113/105/097 105/097/089 097/089/081 089/081/073 081/073/065 073/065/057 065/057/049 057/049/041 049/041/033 041/033/025 033/025/017 025/017/009 017/009/001 009/001/361 001/361/353
 do
 
-DOY=`echo $INTERVALs | awk -F/ '{print $1}'`
-#echo $DOY $DOYWANTED
-if [ $DOY -eq $DOYWANTED ]; then
-  break
-fi
+  DOY=`echo $INTERVALs | awk -F/ '{print $1}'`
+  if [ $DOY -eq $DOYWANTED ]; then
+    break
+  fi
 
-done	# finding the three dates
-#################################################################
+done  
 
 echo "NRT DOY to download is " $DOY
 # this is the day the 8-day period BEGINS
 echo "The three INTERVALs needed are " $INTERVALs
 echo "these are the days the 8-day periods BEGIN"
 
-
-
-# check if all subdirectories exist first
+# build output directories if needed
 for dirs in 1-yr-max 3-yr-max 5-yr-90 10-yr-90 median-all-yr-max ALC pctprogress
 do
-
-   if [ ! -d "${dirs}" ];then
-      echo "Need to make subdirectory " $dirs
-      mkdir $dirs
-   fi
-
-done	# checking all subdirs
-#################################################################
-
-
-# test to see if 1-yr product already exists for this date
-# if so, assume all products already exist and exit
-##echo "got to test"
-##if [ ! -f ./1-yr-max/ForWarn2LAEA.$YEAR.$DOY.1-yr-baseline.img ]; then
-   ##echo "Products do not already exist for ./1-yr-max/ForWarnLAEA."$YEAR"."$DOY".1-yr-baseline.img"
-   ##echo "Assuming that NO products already exist for " $YEAR $DOY
-   ##echo "Generating all products for " $YEAR $DOY
-
-
-
-
+  if [ ! -d "${dirs}" ];then
+    echo "Need to make subdirectory " $dirs
+    mkdir $dirs
+  fi
+done  
 
 # get rid of any existing or partial gz downloads
-   rm -f *.gz*
+rm -f *.gz*
 
+let LASTYEAR=$YEAR-1
 
-   let LASTYEAR=$YEAR-1
+# The three julian days to make precursors for
+DOY1=`echo $INTERVALs | awk -F"/" '{print $1}'`
+DOY2=`echo $INTERVALs | awk -F"/" '{print $2}'`
+DOY3=`echo $INTERVALs | awk -F"/" '{print $3}'`
 
-   DOY1=`echo $INTERVALs | awk -F"/" '{print $1}'`
-   DOY2=`echo $INTERVALs | awk -F"/" '{print $2}'`
-   DOY3=`echo $INTERVALs | awk -F"/" '{print $3}'`
+echo $DOY1 $DOY2 $DOY3
 
-   echo $DOY1 $DOY2 $DOY3
+# Calculates the correct year for each julian day.
+# The first two julian days of the year have at least one day in the
+# corresponding interval that occurred in year previous to what was supplied
+# in the datestring argument.
+case $DOY1 in
+001)  
+  YRDOY3=$YEAR/$DOY1
+  YRDOY2=$LASTYEAR/$DOY2
+  YRDOY1=$LASTYEAR/$DOY3;;
+009)
+  YRDOY3=$YEAR/$DOY1
+  YRDOY2=$YEAR/$DOY2
+  YRDOY1=$LASTYEAR/$DOY3;;
+*)  
+  YRDOY3=$YEAR/$DOY1
+  YRDOY2=$YEAR/$DOY2
+  YRDOY1=$YEAR/$DOY3;;
+esac
 
+echo $YEAR $INTERVALs $YRDOY3 $YRDOY2 $YRDOY1
 
-   case $DOY1 in
-   001)	
-      YRDOY3=$YEAR/$DOY1
-      YRDOY2=$LASTYEAR/$DOY2
-      YRDOY1=$LASTYEAR/$DOY3;;
-   009)
-      YRDOY3=$YEAR/$DOY1
-      YRDOY2=$YEAR/$DOY2
-      YRDOY1=$LASTYEAR/$DOY3;;
-   *)	
-      YRDOY3=$YEAR/$DOY1
-      YRDOY2=$YEAR/$DOY2
-      YRDOY1=$YEAR/$DOY3;;
-   esac
-
-   echo $YEAR $INTERVALs $YRDOY3 $YRDOY2 $YRDOY1
-
-   # parse YRDOY3 YRDOY2 YRDOY1 into paired years and dates
-   YR3=`echo $YRDOY3 | awk -F/ '{print $1}'`
-   DOY3=`echo $YRDOY3 | awk -F/ '{print $2}'`
-   YR2=`echo $YRDOY2 | awk -F/ '{print $1}'`
-   DOY2=`echo $YRDOY2 | awk -F/ '{print $2}'`
-   YR1=`echo $YRDOY1 | awk -F/ '{print $1}'`
-   DOY1=`echo $YRDOY1 | awk -F/ '{print $2}'`
-
+# parse YRDOY3 YRDOY2 YRDOY1 into paired years and dates
+YR3=`echo $YRDOY3 | awk -F/ '{print $1}'`
+DOY3=`echo $YRDOY3 | awk -F/ '{print $2}'`
+YR2=`echo $YRDOY2 | awk -F/ '{print $1}'`
+DOY2=`echo $YRDOY2 | awk -F/ '{print $2}'`
+YR1=`echo $YRDOY1 | awk -F/ '{print $1}'`
+DOY1=`echo $YRDOY1 | awk -F/ '{print $2}'`
 
 # make the numerator for all products (except ALC)
-# first make the new maxMODIS.nrt for the current date $YRDOY3
-
-# try to load this DOY as nrt first
-   THIRDDATETYPE=nrt
-   YEAR=$YR3
-   DOY=$DOY3
-#################################################################
-#################################################################
-# remove existing Terra and Aqua tile tifs
-   rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-   rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 
 #################################################################
-# download 26 tiles for conus each from Aqua and from Terra
-
-echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
-
-# download 26 Terra tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-# download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-#################################################################
-# unzip all tiles
-
-# did we get 26 each?
-let numtiles=`ls -1 *.gz | wc -l`
-
-echo "numtiles was " $numtiles
-
-# were tiles available as nrt?
-if [ "$numtiles" == 0 ]; then
-   echo "Tiles for DOY "$YEAR $DOY " are not available as nrt!"
-   echo "Attempting to download tiles for this DOY as std!"
-   THIRDDATETYPE=std
-
-   # try downloading again as std
-#################################################################
-# remove existing Terra and Aqua tile tifs
-   rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-   rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-#################################################################
-# download 26 tiles for conus each from Aqua and from Terra
-
-echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
-
-# download 26 Terra tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-# download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
+#
+#             maxMODIS Precursor Generation
+# 
 #################################################################
 
-fi	# tried downloading as std instead
+##
+#
+# The maxMODIS dataset is the result of comparing three MODIS
+#   products together and selecting the maximum value at each pixel.
+#
 
-# did we get 26 each?
-let numtiles=`ls -1 *.gz | wc -l`
+# Core state variables
+THIRDDATETYPE=nrt
+YEAR=$YR3
+DOY=$DOY3
 
-if [ "$numtiles" == 52 ]; then
-   echo "Got 52 tifs for " $YEAR $DOY
-   else
-      echo "ERROR: Tiles MISSING for " $YEAR $DOY " only got " $numtiles
-fi
-
-gunzip *.gz
-
-#################################################################
-# mosaic together Terra for this DOY
-
-rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o "Terra.img"  GMOD09Q1.A$YEAR$DOY*.tif
-echo "done mosaicking Terra images together"
-#rm -f Terra.tif
-#gdal_translate Terra.img -of GTiff Terra.tif
-#xv Terra.tif
-
-# mosaic together Aqua for this DOY
-
-rm -f Aqua.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$YEAR$DOY.*.tif
-echo "done mosaicking Aqua images together"
-#rm -f Aqua.tif
-#gdal_translate Aqua.img -of GTiff Aqua.tif
-#xv Aqua.tif
-
-#################################################################
 # remove existing Terra and Aqua tile tifs
 rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 
-#################################################################
-# take the maximum NDVI from the Terra and Aqua 8-day composites
+# download 26 tiles for conus each from Aqua and from Terra
+echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
 
-# if both are 253 or if both are 255 or if either are 253 with the other 255, then 255, but this is NOT nodata
-# if either are 254, then 254, water
+# Note: these commands use curly brace syntax to generate several commands
 
-# 252 is nodata coming out
+# download 26 Terra tiles for conus
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
-echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
+# download 26 Aqua tiles for conus
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
-#find maxval composite of Terra and Aqua
+##
+# Try to get STD tiles if NRT is not available for $DOY
+# 
+let numtiles=`ls -1 *.gz | wc -l`
+if [ "$numtiles" == 0 ]; then
+
+  echo "Tiles for DOY "$YEAR $DOY " are not available as nrt!"
+  echo "Attempting to download tiles for this DOY as std!"
+  THIRDDATETYPE=std
+
+  # remove existing Terra and Aqua tile tifs
+  rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+  rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+
+  # download 26 tiles for conus each from Aqua and from Terra
+  echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
+
+  # download 26 Terra tiles for conus
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+  # download 26 Aqua tiles for conus
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+  wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+fi # Try STD tiles if NRT is not available
+
+# Verify that we got 52 tiles, otherwise stop the script!
+let numtiles=`ls -1 *.gz | wc -l`
+if [ "$numtiles" == 52 ]; then
+  echo "Got 52 tifs for " $YEAR $DOY
+  else
+    echo "ERROR: Tiles MISSING for " $YEAR $DOY " only got " $numtiles
+    echo "Exiting..."
+    # STOP THE PRESS
+    exit 52
+fi
+
+gunzip *.gz
+
+# Mosaic together Terra for this DOY
+
+rm -f Terra.img
+gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o "Terra.img"  GMOD09Q1.A$YEAR$DOY*.tif
+echo "done mosaicking Terra images together"
+
+# mosaic together Aqua for this DOY
+rm -f Aqua.img
+gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$YEAR$DOY.*.tif
+echo "done mosaicking Aqua images together"
+
+# remove existing Terra and Aqua tile tifs
+rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+
+##
+#
+# Take the maximum NDVI from the Terra and Aqua 8-day composites.
+#
+# Raster calculation summary:
+#
+#  Output 255:
+#    - both Aqua and Terra are either 253 or 255
+#    - either Aqua or Terra are 253 with the other 255 (this is not nodata)
+#
+#  Output 254 (water):
+#    - either Aqua or Terra is 254
+# 
+#  NoData value is 252
+
+echo "Taking the maximum NDVI from the Terra and Aqua 8-day composites..."
+
+# find max val composite of Terra and Aqua
 # and propagate two mask values
 gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img --calc="\
 maximum((A<251)*A,(B<251)*B)\
@@ -325,226 +319,205 @@ maximum((A<251)*A,(B<251)*B)\
 " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
 rm -f maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
 
-#gdal_translate maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
-#################################################################
+##
+#
+# maxMODIS generation for DOY2 and DOY1
+#
+# Over the two earlier dates in this interval, see if maxMODIS std files exist.
+# If they don't exist, make them.
 
-# over the two earlier dates in this interval
-# see whether maxMODIS std files exist already
-# if not, make them
+# Try std first
+FIRSTDATETYPE=std
+SECONDDATETYPE=std
 
-# try std TYPE download first
-   FIRSTDATETYPE=std
-   SECONDDATETYPE=std
+for YRDOY in $YRDOY2 $YRDOY1
+do
 
-   for YRDOY in $YRDOY2 $YRDOY1
-   do
+  # try std TYPE download first
+  TYPE=std
 
-      # try std TYPE download first
-      TYPE=std
+  PASTYR=`echo $YRDOY | awk -F/ '{print $1}'`
+  PASTDOY=`echo $YRDOY | awk -F/ '{print $2}'`
 
-      PASTYR=`echo $YRDOY | awk -F/ '{print $1}'`
-      PASTDOY=`echo $YRDOY | awk -F/ '{print $2}'`
+  # does this maxMODIS PASTDOY double-max std image already exist?
+  # if not, make it
+  if [ ! -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.img ]; then
+    echo "maxMODIS file does not exist for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
+    # get tiles and make it
+    echo "Fetching tiles and generating double max for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
 
+    # remove existing Terra and Aqua tile tifs
+    rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+    rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+    
+    # Download the tiles
+    echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
+    # 26 Terra tiles
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
-      # does this maxMODIS PASTDOY double-max std image already exist?
-      # if not, make it
-      if [ ! -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.img ]; then
-         echo "maxMODIS file does not exist for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
-         # get tiles and make it
-         echo "Fetching tiles and generating double max for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
+    # 26 Aqua tiles
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+    wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
+    # Verify we got 52 STD tiles, otherwise try downloading NRT. If NRT fails, quit the script.
+    let numtiles=`ls -1 *.gz | wc -l`
+    if [ "$numtiles" == 52 ]; then
+      echo "Got 52 std tiles for " $PASTYR $PASTDOY $TYPE
+    else
+      # Tiles missing
+      echo "WARNING: std tiles MISSING for " $PASTYR $PASTDOY $TYPE ". Only got " $numtiles " tiles."
 
-#################################################################
-#################################################################
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-#################################################################
-# download 26 tiles for conus each from Aqua and from Terra
-
-echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
-
-# download 26 Terra tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-# download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-#################################################################
-
-# did we get 26 std tiles each?
-let numtiles=`ls -1 *.gz | wc -l`
-if [ "$numtiles" == 52 ]; then
-   echo "Got 52 std tiles for " $PASTYR $PASTDOY $TYPE
-else
-   echo "ERROR: std Tiles MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numtiles
-   # did we get 26 std Terra tiles?
-   let numterratiles=`ls -1 GMOD09Q1.*.gz | wc -l`
-   if [ "$numterratiles" == 26 ]; then
-      echo "Got 26 Terra std tifs for " $PASTYR $PASTDOY $TYPE
-   else
-      echo "Only got " $numterratiles " std Terra tiles for " $PASTYR $PASTDOY $TYPE
-      echo "Trying nrt for Terra " $PASTYR $PASTDOY $TYPE " instead now ..."
-      TYPE=nrt
-
-#################################################################
-# download 26 nrt tiles for conus from Terra
-
-echo "Now downloading Terra DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
-
-# download 26 Terra tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-#################################################################
-
-      # did we get 26 nrt Terra tiles this time?
+      # Verify Terra or try NRT, or quit.
       let numterratiles=`ls -1 GMOD09Q1.*.gz | wc -l`
       if [ "$numterratiles" == 26 ]; then
-         echo "Got 26 Terra nrt tiles for " $PASTYR $PASTDOY $TYPE
-         # set nrt TYPE for the right filename in upcoming gdal_calc
-         echo YRDOY is $YRDOY
-         echo YRDOY1 is $YRDOY1
-         if [ $YRDOY == $YRDOY1 ]; then
-            FIRSTDATETYPE=nrt
-            echo FIRSTDATETYPE is $FIRSTDATETYPE
-         else
-            SECONDDATETYPE=nrt
-            echo SECONDDATETYPE is $SECONDDATETYPE
-         fi
+          echo "Terra ok."
       else
-         echo "ERROR: std AND nrt Terra Tiles are still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numterratiles
-      fi	# 26 Terra tiles std
-   fi	# 26 Terra tiles nrt
+        echo "Terra tiles are missing for " $PASTYR $PASTDOY $TYPE "."
+        echo "Trying NRT instead..."
+        TYPE=nrt
 
+        # download 26 Terra tiles for conus
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
+        let numterratiles=`ls -1 GMOD09Q1.*.gz | wc -l`
+        if [ "$numterratiles" == 26 ]; then
+          echo "Got 26 Terra nrt tiles for " $PASTYR $PASTDOY $TYPE
+          # set nrt TYPE for the right filename in upcoming gdal_calc
+          echo "YRDOY is " $YRDOY
+          echo "YRDOY1 is " $YRDOY1
+          if [ $YRDOY == $YRDOY1 ]; then
+           FIRSTDATETYPE=nrt
+           echo "FIRSTDATETYPE is " $FIRSTDATETYPE
+          else
+           SECONDDATETYPE=nrt
+           echo "SECONDDATETYPE is " $SECONDDATETYPE
+          fi
+        else
+          echo "ERROR: std AND nrt Terra Tiles are still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numterratiles
+          echo "Exiting..."
+          exit 52
+        fi
+      fi # Terra NRT download
 
-   # did we get 26 std Aqua tiles?
-   let numaquatiles=`ls -1 GMYD09Q1.*.gz | wc -l`
-   if [ "$numaquatiles" == 26 ]; then
-      echo "Got 26 Aqua std tiles for " $PASTYR $PASTDOY
-   else
-      echo "Only got " $numaquatiles " std Aqua tiles for " $PASTYR $PASTDOY $TYPE
-      echo "Trying nrt for Aqua " $PASTYR $PASTDOY $TYPE " instead now ..."
-      TYPE=nrt
-
-#################################################################
-# download 26 nrt tiles for conus from Aqua
-
-echo "Now downloading Aqua DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
-
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-#################################################################
-
-      # did we get 26 nrt Aqua tiles this time?
+      # Verify 26 Aqua tiles or try NRT instead. If NRT fails, quit the script.
       let numaquatiles=`ls -1 GMYD09Q1.*.gz | wc -l`
       if [ "$numaquatiles" == 26 ]; then
-         echo "Got 26 Aqua nrt tiles for " $PASTYR $PASTDOY $TYPE
-         # set nrt TYPE for the right filename in upcoming gdal_calc
-         echo YRDOY is $YRDOY
-         echo YRDOY1 is $YRDOY1
-         if [ $YRDOY == $YRDOY1 ]; then
-            FIRSTDATETYPE=nrt
-            echo FIRSTDATETYPE is $FIRSTDATETYPE
-         else
-            SECONDDATETYPE=nrt
-            echo SECONDDATETYPE is $SECONDDATETYPE
-         fi
+        echo "Aqua ok."
       else
-         echo "ERROR: std AND nrt Aqua Tiles still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numaquatiles
-      fi	# 26 Aqua tiles std
-   fi	# 26 Aqua tiles nrt
+        echo "WARNING: Only got " $numaquatiles " std Aqua tiles for " $PASTYR $PASTDOY $TYPE
+        echo "Trying nrt for Aqua " $PASTYR $PASTDOY $TYPE " instead..."
+        TYPE=nrt
 
-   # did we finally get 26 each?
-   let numtiles=`ls -1 *.gz | wc -l`
-   if [ "$numtiles" == 52 ]; then
-      echo "Finally got 52 tiles for " $PASTYR $PASTDOY
-   else
-      echo "This is NOT GONNA WORK!"
-      echo "Could not get all tiles for Terra or Aqua " $PASTYR $PASTDOY 
-      echo "Tried both std and nrt for EACH!"
-      exit 1
-   fi
+        # download 26 nrt tiles for conus from Aqua
+        echo "Now downloading Aqua DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
-fi	# 52 std Tiles
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+        wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
-# unzip all tiles
-gunzip *.gz
+        let numaquatiles=`ls -1 GMYD09Q1.*.gz | wc -l`
+        if [ "$numaquatiles" == 26 ]; then
+          echo "Aqua ok."
+          # set nrt TYPE for the right filename in upcoming gdal_calc
+          echo "YRDOY is " $YRDOY
+          echo "YRDOY1 is " $YRDOY1
+          if [ $YRDOY == $YRDOY1 ]; then
+            FIRSTDATETYPE=nrt
+            echo "FIRSTDATETYPE is " $FIRSTDATETYPE
+          else
+            SECONDDATETYPE=nrt
+            echo "SECONDDATETYPE is " $SECONDDATETYPE
+          fi
+          else
+          echo "ERROR: std AND nrt Aqua Tiles still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numaquatiles
+          exit 52
+        fi  # 26 Aqua tiles std
+      fi  # 26 Aqua tiles nrt
+    fi  # Getting tiles
 
-#################################################################
-# mosaic together Terra for this DOY
+    # unzip all tiles
+    gunzip *.gz
 
-rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$PASTYR$PASTDOY*.tif
-echo "done mosaicking Terra images together"
-#rm -f Terra.tif
-#gdal_translate Terra.img -of GTiff Terra.tif
-#xv Terra.tif
+    echo "Creating Terra mosaic..."
+    rm -f Terra.img
+    gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$PASTYR$PASTDOY*.tif
 
-# mosaic together Aqua for this DOY
+    echo "Creating Aqua mosaic..."
+    rm -f Aqua.img
+    gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$PASTYR$PASTDOY.*.tif
 
-rm -f Aqua.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$PASTYR$PASTDOY.*.tif
-echo "done mosaicking Aqua images together"
-#rm -f Aqua.tif
-#gdal_translate Aqua.img -of GTiff Aqua.tif
-#xv Aqua.tif
+    # remove existing Terra and Aqua tile tifs
+    rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+    rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 
-#################################################################
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+    ##
+    #
+    # Take the maximum NDVI from the Terra and Aqua 8-day composites.
+    #
+    # (See above for raster calculation summary)
+    #
+    # TYPE is still set from above, std by default, otherwise nrt
 
-#################################################################
-# take the maximum NDVI from the Terra and Aqua 8-day composites
+    echo "Taking the maximum NDVI from the Terra and Aqua 8-day composites..."
 
-# if both are 253 or if both are 255 or if either are 253 with the other 255, then 255, but this is NOT nodata
-# if either are 254, then 254, water
+    gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
+    maximum((A<251)*A,(B<251)*B)\
+    +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
+    +((A==254)|(B==254))*254\
+    " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
+    rm -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
 
-# 252 is nodata coming out
-# TYPE is still set from above, std by default, nrt if necessary
+    else
+    echo "maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file already exists"
+    echo "No need to make maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file"
 
-echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
+  fi
 
-#find maxval composite of Terra and Aqua
-# and propagate two mask values
-gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
-maximum((A<251)*A,(B<251)*B)\
-+(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
-+((A==254)|(B==254))*254\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
-rm -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-#gdal_translate maxMODIS.$PASTYR.$PASTDOY.$TYPE.img -of GTiff maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-#################################################################
-
-         else
-         echo "maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file already exists"
-         echo "No need to make maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file"
-      fi
-
-   done   # next date over the 2 earlier dates in this interval
-
+done   # next date over the 2 earlier dates in this interval
 
 #################################################################
-# make the maxMODISmax.nrt numerator across the three dates for all products
-# consisting of two std dates and one nrt date
+#
+#             maxMODISmax Precursor Generation
+# 
 #################################################################
+
+##
+#
+# Create the maxMODISmax.nrt numerator across the three dates for all products
+# consisting of two std dates and one nrt date (ideally).
 # find 24-day max NDVI triple-max
+#
+# Raster calculation summary:
+#
+# make triple DOY maximum value composite
+# if ANY of three are 254, then 254 = water
+# if ALL three are 255, then 255 = no data
+#
+# Raster calculation summary:
+#
+#  Output 254 (water):
+#   - any of the three datasets are 254
+#
+#  Output 255: 
+#   - if any of the three are 255  
+# 
+#  NoData value is 252
 
+echo
+echo "***************************************************************"
+echo
+echo "Creating maxMODISmax precursor..."
+echo
 echo "FIRSTDATETYPE is " $FIRSTDATETYPE
 echo "SECONDDATETYPE is " $SECONDDATETYPE
 echo "THIRDDATETYPE is " $THIRDDATETYPE
@@ -556,15 +529,7 @@ echo "YR2 is " $YR2
 echo "DOY3 is " $DOY3
 echo "YR3 is " $YR3
 
-# must make this nrt triple-max product every time,
-#   since this is adding a new nrt date
-
-# make triple DOY maximum value composite
-# if ANY of three are 254, then 254 = water
-# if ALL three are 255, then 255 = no data
-
-# 252 is nodata going in
-# 252 is nodata coming out
+# must make this nrt triple-max product every time, since this is adding a new nrt date
 
 gdal_calc.py --debug --calc="\
 maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
@@ -573,23 +538,41 @@ maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.img -A maxMODIS.$YR1.$DOY1.$FIRSTDATETYPE.img -B maxMODIS.$YR2.$DOY2.$SECONDDATETYPE.img -C maxMODIS.$YR3.$DOY3.$THIRDDATETYPE.img --type=Byte --overwrite
 
 rm -f maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.tif
-#gdal_translate maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.img -of GTiff maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.tif
-#xv maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.tif
+
+
 #################################################################
+#
+#             maxMODISalc Precursor Generation
+# 
 #################################################################
 
-# make ALC numerator, maxMODISalc nrt
-# consisting of two std dates and one nrt date
-#################################################################
-# find 24-day Adaptive Length Compositing (ALC) current image
-# for 1-year PRODUCT only
-
-# make triple DOY recent priority composite
+##
+#
+# Create the maxMODISalc nrt numerator across the three dates for all products
+# consisting of two std dates and one nrt date (ideally).
+#
+# Find 24-day Adaptive Length Compositing (ALC) current image for 1-year product only.
+#
+# Raster calculation summary:
+#
+# make triple DOY maximum value composite
 # if ANY of three are 254, then 254 = water
 # if ALL three are 255, then 255 = no data
+#
+# Raster calculation summary:
+#
+#  Output 254 (water):
+#   - any of the three pixels are 254
+#
+#  Output 255: 
+#   - any of the three pixels are 255
+# 
+#  NoData value is 252
 
-# 252 is nodata going in
-# 252 is nodata coming out
+echo
+echo "***************************************************************"
+echo
+echo "Creating maxMODISalc for " $YEAR $DOY "..."
 
 gdal_calc.py --debug --calc="\
 (C<251)*C\
@@ -600,244 +583,185 @@ gdal_calc.py --debug --calc="\
 " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/maxMODISalc.$YR3.$DOY3.$THIRDDATETYPE.img -A maxMODIS.$YR1.$DOY1.$FIRSTDATETYPE.img -B maxMODIS.$YR2.$DOY2.$SECONDDATETYPE.img -C maxMODIS.$YR3.$DOY3.$THIRDDATETYPE.img --type=Byte --overwrite
 
 rm -f $ALCpath/maxMODISalc.$YR3.$DOY3.$THIRDDATETYPE.tif
-#gdal_translate $ALCpath/maxMODISalc.$YR3.$DOY3.$THIRDDATETYPE.img -of GTiff $ALCpath/maxMODISalc.$YR3.$DOY3.$THIRDDATETYPE.tif
-#xv $ALCpath/maxMODISalc.$YR3.$DOY3.$THIRDDATETYPE.tif
-
-echo "Current and ALC/ALC2 current views are now computed for " $YEAR $DOY
-#################################################################
-# nrt current and ALC current views are now computed
-#   for the numerator of all products
-#################################################################
-#################################################################
 
 # loop to make 1-, 3-, 5-, and 10-year products
-   for PRODUCT in 1 3 5 10
-   do
-      echo "Making " $PRODUCT"-yr product now ..."
-   TYPE=std
+for PRODUCT in 1 3 5 10
+do
+  echo "Making " $PRODUCT"-yr product now ..."
+  TYPE=std
 
+  let MINYEAR=$PRODUCT+2003
+  echo "MINYEAR is " $MINYEAR
 
-   let MINYEAR=$PRODUCT+2003
-   echo "MINYEAR is " $MINYEAR
+  if [ $YEAR -ge $MINYEAR ]; then
+    echo $PRODUCT "-year max baseline is possible for year " $YEAR
 
-   if [ $YEAR -ge $MINYEAR ]; then
-     echo $PRODUCT "-year max baseline is possible for year " $YEAR
+    # set denominator file and output subdirectory acc to PRODUCT
+    if [ $PRODUCT -lt 5 ]; then
+      subdir=max
+      denomfile=max
+    else
+      subdir=90
+      denomfile=90
+    fi
 
+    # test whether maxMODISmaxmax std max or maxMODISmax90 over all prior years, over 3 dates,
+    #   and over 2 sensors already exists for denominator baseline
+    if [ ! -f maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img ]; then
+      echo "File does not exist for maxMODISmax"$denomfile"."$PRODUCT"-yr-baseline."$YEAR"."$DOY"."$TYPE".img"
 
-     # set denominator file and output subdirectory acc to PRODUCT
-     if [ $PRODUCT -lt 5 ]; then
-        subdir=max
-        denomfile=max
-     else
-        subdir=90
-        denomfile=90
-     fi
+      # check for intermediate ingredients (maxMODISmax each year) to make it
+      # walk through all past years, EXCLUDING current year
+      # Do we have current and all back-year maxMODIS maps
+      #  for this YR and DOY?
+      yrsback=$PRODUCT
+      # alk forward in time
+      # stop at $LASTYEAR
+      # over all prior years
+      while [ $yrsback -gt 0 ]
+      do
 
+        # if maxMODISmax std file for this date
+        #   for every prior year does not exist, make it
+        let PASTYEAR=$YEAR-$yrsback
+        if [ ! -f maxMODISmax.$PASTYEAR.$DOY.$TYPE.img ]; then
+          echo "maxMODISmax file does not exist for maxMODISmax."$PASTYEAR"."$DOY"."$TYPE".img"
+          # going forward in time thru 3 dates this prior year
+          for YRDOY in $YRDOY1 $YRDOY2 $YRDOY3
+          do
 
-     # test whether maxMODISmaxmax std max or maxMODISmax90 over all prior years, over 3 dates,
-     #   and over 2 sensors already exists for denominator baseline
-     if [ ! -f maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img ]; then
-         echo "File does not exist for maxMODISmax"$denomfile"."$PRODUCT"-yr-baseline."$YEAR"."$DOY"."$TYPE".img"
+            # parse apart this YR and DOY with awk
+            YR=`echo $YRDOY | awk -F"/" '{print $1}'`
+            PASTDOY=`echo $YRDOY | awk -F"/" '{print $2}'`
+            let PASTYR=$YR-$yrsback
+            echo "PASTYR is " $PASTYR
+            echo "PASTDOY is " $PASTDOY
 
+            # does this maxMODIS DOY double-max image already exist?
+            # if not, make it
+            if [ ! -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.img ]; then
+              echo "maxMODIS file does not exist for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
+              # get tiles and make it
+              echo "Fetching and generating double max for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
 
-         # check for intermediate ingredients (maxMODISmax each year) to make it
-#################################################################
-         # walk through all past years, EXCLUDING current year
-         # Do we have current and all back-year maxMODIS maps
-         #  for this YR and DOY?
-         yrsback=$PRODUCT
-         # alk forward in time
-         # stop at $LASTYEAR
-         # over all prior years
-         while [ $yrsback -gt 0 ]
-         do
+              # remove existing Terra and Aqua tile tifs
+              rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+              rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 
-            # if maxMODISmax std file for this date
-            #   for every prior year does not exist, make it
-            let PASTYEAR=$YEAR-$yrsback
-            if [ ! -f maxMODISmax.$PASTYEAR.$DOY.$TYPE.img ]; then
-               echo "maxMODISmax file does not exist for maxMODISmax."$PASTYEAR"."$DOY"."$TYPE".img"
-               # going forward in time thru 3 dates this prior year
-               for YRDOY in $YRDOY1 $YRDOY2 $YRDOY3
-               do
+              # download 26 tiles for conus each from Aqua and from Terra
 
-                  # parse apart this YR and DOY with awk
-                  YR=`echo $YRDOY | awk -F"/" '{print $1}'`
-                  PASTDOY=`echo $YRDOY | awk -F"/" '{print $2}'`
-                  let PASTYR=$YR-$yrsback
-                  echo "PASTYR is " $PASTYR
-                  echo "PASTDOY is " $PASTDOY
+              echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
 
+              # download 26 Terra tiles for conus
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
-                  # does this maxMODIS DOY double-max image already exist?
-                  # if not, make it
-                  if [ ! -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.img ]; then
-                     echo "maxMODIS file does not exist for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
-                     # get tiles and make it
-                     echo "Fetching and generating double max for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
+              # download 26 Aqua tiles for conus
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+              wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
 
+              let numtiles=`ls -1 *.gz | wc -l`
+              if [ "$numtiles" == 52 ]; then
+                echo "Got 52 tifs for " $PASTYR $PASTDOY
+              else
+                echo "WARNING: Tiles MISSING for " $PASTYR $PASTDOY " only got " $numtiles
+              fi
 
-#################################################################
-#################################################################
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+              gunzip *.gz
 
-#################################################################
-# download 26 tiles for conus each from Aqua and from Terra
+              echo "Creating mosaic for Terra..."
+              rm -f Terra.img
+              gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$PASTYR$PASTDOY*.tif
 
-echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
+              echo "Creating mosiac for Aqua..."
+              rm -f Aqua.img
+              gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$PASTYR$PASTDOY.*.tif
 
-# download 26 Terra tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+              # remove existing Terra and Aqua tile tifs
+              rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+              rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
 
-# download 26 Aqua tiles for conus
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+              # take the maximum NDVI from the Terra and Aqua 8-day composites
+              # if both are 253 or if both are 255 or if either are 253 with the other 255, then 255, but this is NOT nodata
+              # if either are 254, then 254, water
+              # 252 is nodata coming out
 
-#################################################################
-# unzip all tiles
+              echo "Taking the maximum NDVI from the Terra and Aqua 8-day composites..."
 
-# did we get 26 each?
-let numtiles=`ls -1 *.gz | wc -l`
-if [ "$numtiles" == 52 ]; then
-   echo "Got 52 tifs for " $PASTYR $PASTDOY
-   else
-      echo "Tiles MISSING for " $PASTYR $PASTDOY " only got " $numtiles
-fi
-
-gunzip *.gz
-
-#################################################################
-# mosaic together Terra for this DOY
-
-rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$PASTYR$PASTDOY*.tif
-echo "done mosaicking Terra images together"
-#rm -f Terra.tif
-#gdal_translate Terra.img -of GTiff Terra.tif
-#xv Terra.tif
-
-# mosaic together Aqua for this DOY
-
-rm -f Aqua.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$PASTYR$PASTDOY.*.tif
-echo "done mosaicking Aqua images together"
-#rm -f Aqua.tif
-#gdal_translate Aqua.img -of GTiff Aqua.tif
-#xv Aqua.tif
-
-#################################################################
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-#################################################################
-# take the maximum NDVI from the Terra and Aqua 8-day composites
-
-# if both are 253 or if both are 255 or if either are 253 with the other 255, then 255, but this is NOT nodata
-# if either are 254, then 254, water
-
-# 252 is nodata coming out
-
-echo "taking the maximum NDVI from the Terra and Aqua 8-day composites"
-
-#find maxval composite of Terra and Aqua
-# and propagate two mask values
-gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
-maximum((A<251)*A,(B<251)*B)\
-+(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
-+((A==254)|(B==254))*254\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
-rm -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-#gdal_translate maxMODIS.$PASTYR.$PASTDOY.$TYPE.img -of GTiff maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-#xv maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-#################################################################
-
-                  else
-                     echo "sensor maxMODIS file already exists for maxMODIS." $PASTYR"."$PASTDOY"."$TYPE".img"
-                  fi
-
-
-               done	# over all 3 YRDOYS
-               # all 3 maxMODIS double-maxes now exist for this prior year
-
-
-#################################################################
-               # generate the maxMODISmax 3-way max over the 3 YRINTERVALs
-               # for this prior year
-#################################################################
-# find 24-day max NDVI maxMODISmax triple-max for this PASTYR
-
-# parse THISYRs for each of the three DOYs
-
-THISYR3=`echo $YRDOY3 | awk -F/ '{print $1-"'$yrsback'"}'`
-THISYR2=`echo $YRDOY2 | awk -F/ '{print $1-"'$yrsback'"}'`
-THISYR1=`echo $YRDOY1 | awk -F/ '{print $1-"'$yrsback'"}'`
-
-
-# make triple DOY maximum value composite
-# if ANY of three are 254, then 254 = water
-# if ALL three are 255, then 255 = no data
-
-# 252 is nodata going in
-# 252 is nodata coming out
-
-gdal_calc.py --debug --calc="\
-maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
-+((A==254)|(B==254)|(C==254))*254\
-+((A==255)&(B==255)&(C==255))*255\
-" --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax.$THISYR3.$DOY3.$TYPE.img -A maxMODIS.$THISYR1.$DOY1.$TYPE.img -B maxMODIS.$THISYR2.$DOY2.$TYPE.img -C maxMODIS.$THISYR3.$DOY3.$TYPE.img --type=Byte --overwrite
-
-rm -f maxMODISmax.$THISYR3.$DOY3.$TYPE.tif
-#gdal_translate maxMODISmax.$THISYR3.$DOY3.$TYPE.img -of GTiff maxMODISmax.$THISYR3.$DOY3.$TYPE.tif
-#xv maxMODISmax.$THISYR3.$DOY3.$TYPE.tif
-#################################################################
+              #find maxval composite of Terra and Aqua
+              # and propagate two mask values
+              gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
+              maximum((A<251)*A,(B<251)*B)\
+              +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
+              +((A==254)|(B==254))*254\
+              " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
+              rm -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
 
             else
-            echo "maxMODISmax file already exists for maxMODISmax."$PASTYEAR"."$DOY"."$TYPE".img"
+              echo "sensor maxMODIS file already exists for maxMODIS." $PASTYR"."$PASTDOY"."$TYPE".img"
             fi
+          done # over all 3 YRDOYS
+
+          # all 3 maxMODIS double-maxes now exist for this prior year
+          # generate the maxMODISmax 3-way max over the 3 YRINTERVALs
+          # for this prior year
+          # find 24-day max NDVI maxMODISmax triple-max for this PASTYR
+
+          # parse THISYRs for each of the three DOYs
+
+          THISYR3=`echo $YRDOY3 | awk -F/ '{print $1-"'$yrsback'"}'`
+          THISYR2=`echo $YRDOY2 | awk -F/ '{print $1-"'$yrsback'"}'`
+          THISYR1=`echo $YRDOY1 | awk -F/ '{print $1-"'$yrsback'"}'`
+
+          # make triple DOY maximum value composite
+          # if ANY of three are 254, then 254 = water
+          # if ALL three are 255, then 255 = no data
+
+          # 252 is nodata going in
+          # 252 is nodata coming out
+
+          gdal_calc.py --debug --calc="\
+          maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
+          +((A==254)|(B==254)|(C==254))*254\
+          +((A==255)&(B==255)&(C==255))*255\
+          " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax.$THISYR3.$DOY3.$TYPE.img -A maxMODIS.$THISYR1.$DOY1.$TYPE.img -B maxMODIS.$THISYR2.$DOY2.$TYPE.img -C maxMODIS.$THISYR3.$DOY3.$TYPE.img --type=Byte --overwrite
+
+          rm -f maxMODISmax.$THISYR3.$DOY3.$TYPE.tif
+        else
+          echo "maxMODISmax file already exists for maxMODISmax."$PASTYEAR"."$DOY"."$TYPE".img"
+        fi
+        # advance one year forward and repeat
+        (( yrsback-- ))
+      done # over all prior years
+
+      # all maxMODISmax files now present
+      # a triple-max file for all three intervals every year
+      # for all 3 YRINTERVALs for current and all yrsback for this $PRODUCT
+      # Use $DOY3 set to third (last) date for naming files
+
+      ########  make $PRODUCT-year product #########################################
+
+      # generate $PRODUCT-year maxMODISmaxmax maximum baseline or maxMODISmax90 percentile baseline over the $PRODUCT prior yrsback years
+      let BACK10=$YEAR-10
+      let BACK9=$YEAR-9
+      let BACK8=$YEAR-8
+      let BACK7=$YEAR-7
+      let BACK6=$YEAR-6
+      let BACK5=$YEAR-5
+      let BACK4=$YEAR-4
+      let BACK3=$YEAR-3
+      let BACK2=$YEAR-2
+      let BACK1=$YEAR-1
 
 
-#################################################################
-
-            # advance one year forward and repeat
-            (( yrsback-- ))
-
-
-         done	# over all prior years
-
-#################################################################
-         # all maxMODISmax files now present
-         # a triple-max file for all three intervals every year
-         # for all 3 YRINTERVALs for current and all yrsback for this $PRODUCT
-         # Use $DOY3 set to third (last) date for naming files
-
-
-########  make $PRODUCT-year product #########################################
-
-         # generate $PRODUCT-year maxMODISmaxmax maximum baseline or maxMODISmax90 percentile baseline over the $PRODUCT prior yrsback years
-         let BACK10=$YEAR-10
-         let BACK9=$YEAR-9
-         let BACK8=$YEAR-8
-         let BACK7=$YEAR-7
-         let BACK6=$YEAR-6
-         let BACK5=$YEAR-5
-         let BACK4=$YEAR-4
-         let BACK3=$YEAR-3
-         let BACK2=$YEAR-2
-         let BACK1=$YEAR-1
-
-
-         case $PRODUCT in
-         10)
-            # generate 90th percentile over prior 10 years
-            gdal_calc.py --debug --calc="\
+      case $PRODUCT in
+      10)
+        # generate 90th percentile over prior 10 years
+        gdal_calc.py --debug --calc="\
 percentile([\
 (A<251)*A,(B<251)*B,(C<251)*C,\
 (D<251)*D,(E<251)*E,(F<251)*F,\
@@ -852,11 +776,11 @@ percentile([\
 (A>250)&(B>250)&(C>250)&(D>250)&(E>250)&(F>250)&(G>250)&(H>250)&(I>250)&(J>250)\
  ) )*255\
 " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax90.$PRODUCT-yr-baseline.$YR3.$DOY3.$TYPE.img -A maxMODISmax.$BACK10.$DOY3.$TYPE.img -B maxMODISmax.$BACK9.$DOY3.$TYPE.img -C maxMODISmax.$BACK8.$DOY3.$TYPE.img -D maxMODISmax.$BACK7.$DOY3.$TYPE.img -E maxMODISmax.$BACK6.$DOY3.$TYPE.img -F maxMODISmax.$BACK5.$DOY3.$TYPE.img -G maxMODISmax.$BACK4.$DOY3.$TYPE.img -H maxMODISmax.$BACK3.$DOY3.$TYPE.img -I maxMODISmax.$BACK2.$DOY3.$TYPE.img -J maxMODISmax.$BACK1.$DOY3.$TYPE.img  --type=Byte --overwrite
-         ;;
 
-         5)
-            # generate 90th percentile over prior 5 years
-            gdal_calc.py --debug --calc="\
+      ;;
+      5)
+        # generate 90th percentile over prior 5 years
+        gdal_calc.py --debug --calc="\
 percentile([\
 (A<251)*A,(B<251)*B,(C<251)*C,\
 (D<251)*D,(E<251)*E\
@@ -869,494 +793,350 @@ percentile([\
 (A>250)&(B>250)&(C>250)&(D>250)&(E>250)\
  ) )*255\
 " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax90.$PRODUCT-yr-baseline.$YR3.$DOY3.$TYPE.img -A maxMODISmax.$BACK5.$DOY3.$TYPE.img -B maxMODISmax.$BACK4.$DOY3.$TYPE.img -C maxMODISmax.$BACK3.$DOY3.$TYPE.img -D maxMODISmax.$BACK2.$DOY3.$TYPE.img -E maxMODISmax.$BACK1.$DOY3.$TYPE.img  --type=Byte --overwrite
-         ;;
 
-         3)
-            # generate maximum over prior 3 years
-            gdal_calc.py --debug --calc="\
+      ;;
+      3)
+        # generate maximum over prior 3 years
+        gdal_calc.py --debug --calc="\
 maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
 +((A==254)|(B==254)|(C==254))*254\
 +((A==255)&(B==255)&(C==255))*255\
 " --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmaxmax.$PRODUCT-yr-baseline.$YR3.$DOY3.$TYPE.img -A maxMODISmax.$BACK3.$DOY3.$TYPE.img -B maxMODISmax.$BACK2.$DOY3.$TYPE.img -C maxMODISmax.$BACK1.$DOY3.$TYPE.img --type=Byte --overwrite
-         ;;
 
-         1)
-            # generate maximum over prior year
-            # for 1-yr product, 1-yr max is the same as the max last year
-            cp maxMODISmax.$BACK1.$DOY3.$TYPE.img maxMODISmaxmax.$PRODUCT-yr-baseline.$YR3.$DOY3.$TYPE.img
-         ;;
+      ;;
+      1)
+        # generate maximum over prior year
+        # for 1-yr product, 1-yr max is the same as the max last year
+        cp maxMODISmax.$BACK1.$DOY3.$TYPE.img maxMODISmaxmax.$PRODUCT-yr-baseline.$YR3.$DOY3.$TYPE.img
+      ;;
+      esac # over all 1-, 3-, 5-, and 10-year cases
 
-         esac	# over all 1-, 3-, 5-, and 10-year cases
+      # done with custom calculations to make maxMODISmaxmax or maxMODISmax90 for each case,
 
+    else
+      echo "maxMODISmax"$denomfile"."$PRODUCT"-yr-baseline."$YEAR"."$DOY"."$TYPE".img file already exists"
+    fi
 
-         # done with custom calculations to make maxMODISmaxmax or maxMODISmax90 for each case,
+    #  now continue with generic PRODUCT calculations 
+    # only if 1-yr product, finish calculating ALC products
+    if [ $PRODUCT -eq 1 ]; then
 
+      #################################################################
+      #ALC and ALC2, for 1-yr only
+      #################################################################
+      # calculate Adaptive Length Compositing (ALC) product
+      # only for 1-year PRODUCT
+      # using recent priority values current nrt view
+      # standard way, (observed-expected)/expected NDVI
+      # clamp departure values between 2 and 254
+      # if either current or baseline is 254 water, then 0 water
+      # if BOTH current AND baseline are 255 no value, then 255 no value
 
-         else
-            echo "maxMODISmax"$denomfile"."$PRODUCT"-yr-baseline."$YEAR"."$DOY"."$TYPE".img file already exists"
-         fi
+      # 252 is nodata coming in
+      # 1 is nodata going out
 
-#################################################################
-#################################################################
+      # 0 = water
+      # 255 = no NDVI value
 
-
-         #  now continue with generic PRODUCT calculations 
-
-         # only if 1-yr product, finish calculating ALC products
-         if [ $PRODUCT -eq 1 ]; then
-
-#################################################################
-#ALC and ALC2, for 1-yr only
-#################################################################
-# calculate Adaptive Length Compositing (ALC) product
-# only for 1-year PRODUCT
-# using recent priority values current nrt view
-# standard way, (observed-expected)/expected NDVI
-# clamp departure values between 2 and 254
-# if either current or baseline is 254 water, then 0 water
-# if BOTH current AND baseline are 255 no value, then 255 no value
-
-# 252 is nodata coming in
-# 1 is nodata going out
-
-# 0 = water
-# 255 = no NDVI value
-
-
-         if [ ! -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ]
-         then
-            echo "File does not exist for $ALCpath/ALC/ALC2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img"
-
-echo "Calculating ALC product ..."
-
-gdal_calc.py --debug --calc="\
+      if [ ! -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ]
+      then
+        echo "File does not exist for $ALCpath/ALC/ALC2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img"
+        echo "Calculating ALC product ..."
+        gdal_calc.py --debug --calc="\
 ((A<251)&(B<251))*\
 round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
 +((A==254)|(B==254))*0\
 +((A==255)&(B==255))*255\
 " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/maxMODISalc.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmaxmax.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-
-#################################################################
-# calculate Adaptive Length Compositing (ALC2) sqrt product
-# only for 1-year PRODUCT
-# using recent priority values current view
-# sqrt of expected, (observed-expected)/sqrt(expected+1)
-# must use native NDVI scaling
-# clamp departure values between 2 and 254
-# if either current or baseline is 254 water, then 0 water
-# if BOTH current AND baseline are 255 no value, then 255
-
-# 252 is nodata coming in
-# 1 is nodata going out
-
-
-# 0 = water
-# 255 = no NDVI value
-
-echo "Calculating ALC2 sqrt product ..."
-
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251))*\
-round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
-+((A==254)|(B==254))*0\
-+((A==255)&(B==255))*255\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/maxMODISalc.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmaxmax.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-
-#################################################################
-# ALC and ALC2 split, reproject, re-join
-
-# split out two mask categories, 0 water and 255 nodata from ALC product
-# use 128 as a fill value, but not as nodata
-
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ALC product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Splitting out data from two masks in ALC product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-#################################################################
-# reproject ALC product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ALC product data with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
-rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-echo "Warping ALC product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
-rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Rejoining ALC product masks with data"
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-# take out the trash here
-rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-
-
-#################################################################
-#################################################################
-# split out two mask categories, 0 water and 255 nodata from ALC2 sqrt product
-# use 128 as a fill value, but not as nodata
-
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ALC2 sqrt product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Splitting out data from two masks in ALC2 sqrt product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-#################################################################
-# reproject ALC2 sqrt product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ALC2 sqrt product with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
-rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-echo "Warping ALC2 sqrt product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
-rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Rejoining ALC2 sqrt product masks with data"
-
-# probably gdal_calc assigns 255 as default nodata here
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
-rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-# take out the trash here
-rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-
-
-         else
-            echo "$ALCpath/ALC/ALC2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img file already exists"
-         fi
-
-#################################################################
-#################################################################
-
-
-         fi	# PRODUCT was 1, just calculated ALC and ALC2 products
-
-
-         # generate FW and FW2 divison products for $PRODUCT-year
-         # split, reproject, re-paste
-#################################################################
-#################################################################
-# calculate $PRODUCT-year ForWarn product
-# use nrt version for maxMODISmax current view
-# standard way, (observed-expected)/expected NDVI
-# clamp departure values between 2 and 254
-# if either current or baseline is 254 water, then 0 water
-# if BOTH current AND baseline are 255 no value, then 255 no value
-
-
-
-         if [ ! -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ]
-         then
-            echo "File does not exist for ./"$PRODUCT"-yr-"$subdir"/ForWarn2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img"
-
-
-# 252 is nodata coming in
-# 1 is nodata going out
-
-# 0 = water
-# 255 = no NDVI value
-
-echo "Calculating ForWarn product ..."
-
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251))*\
-round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
-+((A==254)|(B==254))*0\
-+((A==255)&(B==255))*255\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-#################################################################
-# calculate $PRODUCT-year ForWarn sqrt product
-# sqrt of expected, (observed-expected)/sqrt(expected+1)
-# must use native NDVI scaling
-# clamp departure values between 2 and 254
-# if either current or baseline is 254 water, then 0 water
-# if BOTH current AND baseline are 255 no value, then 255
-
-# 252 is nodata coming in
-# 1 is nodata going out
-
-
-# 0 = water
-# 255 = no NDVI value
-
-echo "Calculating ForWarn2 sqrt product ..."
-
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251))*\
-round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
-+((A==254)|(B==254))*0\
-+((A==255)&(B==255))*255\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-#################################################################
-# FW and FW2 split, reproject, re-join
-
-# split out two mask categories, 0 water and 255 nodata from ForWarn product
-# use 128 as a fill value, but not as nodata
-
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ForWarn product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Splitting out data from two masks in ForWarn product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-#################################################################
-# reproject ForWarn product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ForWarn product data with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
-rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-echo "Warping ForWarn product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
-rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Rejoining ForWarn product masks with data"
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-# take out the trash
-rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
-
-#################################################################
-#################################################################
-# split out two mask categories, 0 water and 255 nodata from ForWarn2 sqrt product
-# use 128 as a fill value, but not as nodata
-
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ForWarn2 sqrt product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Splitting out data from two masks in ForWarn2 sqrt product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-#################################################################
-# reproject ForWarn2 sqrt product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ForWarn2 sqrt product with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
-
-
-echo "Warping ForWarn2 sqrt product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
-
-
-echo "Rejoining ForWarn2 sqrt product masks with data"
-
-# probably gdal_calc assigns 255 as default nodata here
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-#xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
-
-# take out the trash
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
-rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
-
-         else
-            echo "./$PRODUCT-yr-"$subdir"/ForWarn2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img file already exists"
-         fi
-
-
-#################################################################
-#################################################################
-
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+        # calculate Adaptive Length Compositing (ALC2) sqrt product
+        # only for 1-year PRODUCT
+        # using recent priority values current view
+        # sqrt of expected, (observed-expected)/sqrt(expected+1)
+        # must use native NDVI scaling
+        # clamp departure values between 2 and 254
+        # if either current or baseline is 254 water, then 0 water
+        # if BOTH current AND baseline are 255 no value, then 255
+        # 252 is nodata coming in
+        # 1 is nodata going out
+        # 0 = water
+        # 255 = no NDVI value
+
+        echo "Calculating ALC2 sqrt product ..."
+
+        gdal_calc.py --debug --calc="\
+        ((A<251)&(B<251))*\
+        round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
+        +((A==254)|(B==254))*0\
+        +((A==255)&(B==255))*255\
+        " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/maxMODISalc.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmaxmax.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+        # ALC and ALC2 split, reproject, re-join
+        # split out two mask categories, 0 water and 255 nodata from ALC product
+        # use 128 as a fill value, but not as nodata
+        # 1 is nodata coming in
+        # 1 is nodata going out
+        # use 128 as a fill value
+
+        echo "Splitting out two mask categories from ALC product ..."
+        gdal_calc.py --debug --calc="\
+        ((A==0)|(A==255))*A\
+        +((A>1)&(A<255))*128\
+        " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+        echo "Splitting out data from two masks in ALC product ..."
+        # use 1 as a fill value
+        gdal_calc.py --debug --calc="\
+        ((A>1)&(A<255))*A\
+        +((A==0)|(A==255))*1\
+        " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+
+        # reproject ALC product to LAEA
+        # reproject masks and data separately, and re-join
+        echo "Warping ALC product data with gdalwarp"
+        gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
+        rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+
+        echo "Warping ALC product masks with gdalwarp"
+        gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
+        rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+        echo "Rejoining ALC product masks with data"
+        gdal_calc.py --debug --calc="\
+        ((A==0)|(A==255))*A\
+        +((B>1)&(B<255))*B\
+        " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+        # take out the trash here
+        rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+        rm -f $ALCpath/ALC/ALCLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+        rm -f $ALCpath/ALC/ALC.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+
+        # split out two mask categories, 0 water and 255 nodata from ALC2 sqrt product
+        # use 128 as a fill value, but not as nodata
+        # 1 is nodata coming in
+        # 1 is nodata going out
+        # use 128 as a fill value
+        echo "Splitting out two mask categories from ALC2 sqrt product ..."
+        gdal_calc.py --debug --calc="\
+        ((A==0)|(A==255))*A\
+        +((A>1)&(A<255))*128\
+        " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+        echo "Splitting out data from two masks in ALC2 sqrt product ..."
+        # use 1 as a fill value
+        gdal_calc.py --debug --calc="\
+        ((A>1)&(A<255))*A\
+        +((A==0)|(A==255))*1\
+        " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+
+        # reproject ALC2 sqrt product to LAEA
+        # reproject masks and data separately, and re-join
+        echo "Warping ALC2 sqrt product with gdalwarp"
+        gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
+        rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+
+        echo "Warping ALC2 sqrt product masks with gdalwarp"
+        gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
+        rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+        echo "Rejoining ALC2 sqrt product masks with data"
+        # probably gdal_calc assigns 255 as default nodata here
+        gdal_calc.py --debug --calc="\
+        ((A==0)|(A==255))*A\
+        +((B>1)&(B<255))*B\
+        " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
+        rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+        # take out the trash here
+        rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+        rm -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+        rm -f $ALCpath/ALC/ALC2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
 
       else
-      echo "This "$PRODUCT"-year length baseline is not possible for this year "$YEAR" "$DOY
-      fi	# year is earlier than 2003+$PRODUCT, this length baseline is not possible
+        echo "$ALCpath/ALC/ALC2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img file already exists"
+      fi
+
+    fi # PRODUCT was 1, just calculated ALC and ALC2 products
+
+    # generate FW and FW2 divison products for $PRODUCT-year
+    # split, reproject, re-paste
+    # calculate $PRODUCT-year ForWarn product
+    # use nrt version for maxMODISmax current view
+    # standard way, (observed-expected)/expected NDVI
+    # clamp departure values between 2 and 254
+    # if either current or baseline is 254 water, then 0 water
+    # if BOTH current AND baseline are 255 no value, then 255 no value
+    if [ ! -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ]
+    then
+
+      echo "File does not exist for ./"$PRODUCT"-yr-"$subdir"/ForWarn2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img"
+
+      # 252 is nodata coming in
+      # 1 is nodata going out
+      # 0 = water
+      # 255 = no NDVI value
+      echo "Calculating ForWarn product ..."
+      gdal_calc.py --debug --calc="\
+      ((A<251)&(B<251))*\
+      round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
+      +((A==254)|(B==254))*0\
+      +((A==255)&(B==255))*255\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+      # calculate $PRODUCT-year ForWarn sqrt product
+      # sqrt of expected, (observed-expected)/sqrt(expected+1)
+      # must use native NDVI scaling
+      # clamp departure values between 2 and 254
+      # if either current or baseline is 254 water, then 0 water
+      # if BOTH current AND baseline are 255 no value, then 255
+      # 252 is nodata coming in
+      # 1 is nodata going out
+      # 0 = water
+      # 255 = no NDVI value
+      echo "Calculating ForWarn2 sqrt product ..."
+      gdal_calc.py --debug --calc="\
+      ((A<251)&(B<251))*\
+      round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
+      +((A==254)|(B==254))*0\
+      +((A==255)&(B==255))*255\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B maxMODISmax$denomfile.$PRODUCT-yr-baseline.$YEAR.$DOY.$TYPE.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+      # FW and FW2 split, reproject, re-join
+      # split out two mask categories, 0 water and 255 nodata from ForWarn product
+      # use 128 as a fill value, but not as nodata
+      # 1 is nodata coming in
+      # 1 is nodata going out
+      # use 128 as a fill value
+      echo "Splitting out two mask categories from ForWarn product ..."
+      gdal_calc.py --debug --calc="\
+      ((A==0)|(A==255))*A\
+      +((A>1)&(A<255))*128\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+      echo "Splitting out data from two masks in ForWarn product ..."
+      # use 1 as a fill value
+      gdal_calc.py --debug --calc="\
+      ((A>1)&(A<255))*A\
+      +((A==0)|(A==255))*1\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      
+      # reproject ForWarn product to LAEA
+      # reproject masks and data separately, and re-join
+      echo "Warping ForWarn product data with gdalwarp"
+      gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
+      rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      
+      echo "Warping ForWarn product masks with gdalwarp"
+      gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
+      rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+      echo "Rejoining ForWarn product masks with data"
+      gdal_calc.py --debug --calc="\
+      ((A==0)|(A==255))*A\
+      +((B>1)&(B<255))*B\
+      " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+      # take out the trash
+      rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarnLAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
+
+      # split out two mask categories, 0 water and 255 nodata from ForWarn2 sqrt product
+      # use 128 as a fill value, but not as nodata
+      # 1 is nodata coming in
+      # 1 is nodata going out
+      # use 128 as a fill value
+      echo "Splitting out two mask categories from ForWarn2 sqrt product ..."
+      gdal_calc.py --debug --calc="\
+      ((A==0)|(A==255))*A\
+      +((A>1)&(A<255))*128\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
 
 
-   done		# over 1-, 3-, 5- and 10-yr PRODUCTs
-   echo "1-, 3-, 5- and 10-yr products have been generated!"
+      echo "Splitting out data from two masks in ForWarn2 sqrt product ..."
 
-   # done with all $PRODUCTS
+      # use 1 as a fill value
+
+      gdal_calc.py --debug --calc="\
+      ((A>1)&(A<255))*A\
+      +((A==0)|(A==255))*1\
+      " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img  -A ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      #gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      #xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
 
 
-########  calculate three percentiles over all prior max baselines ############
+      #################################################################
+      # reproject ForWarn2 sqrt product to LAEA
+      # reproject masks and data separately, and re-join
 
+      echo "Warping ForWarn2 sqrt product with gdalwarp"
+
+      gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      #gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+      #xv ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.tif
+
+
+      echo "Warping ForWarn2 sqrt product masks with gdalwarp"
+
+      gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+      #gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+      #xv ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.tif
+
+
+      echo "Rejoining ForWarn2 sqrt product masks with data"
+
+      # probably gdal_calc assigns 255 as default nodata here
+
+      gdal_calc.py --debug --calc="\
+      ((A==0)|(A==255))*A\
+      +((B>1)&(B<255))*B\
+      " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img  -A ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img -B ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img --type=Byte --overwrite
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+      #gdal_translate ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img -of GTiff ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+      #xv ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.tif
+
+      # take out the trash
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.data.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.masks.img*
+      rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
+
+    else
+      echo "./$PRODUCT-yr-"$subdir"/ForWarn2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img file already exists"
+    fi
+
+  else
+    echo "This "$PRODUCT"-year length baseline is not possible for this year "$YEAR" "$DOY
+  fi  # year is earlier than 2003+$PRODUCT, this length baseline is not possible
+
+done   # over 1-, 3-, 5- and 10-yr PRODUCTs
+echo "1-, 3-, 5- and 10-yr products have been generated!"
+
+##
 # calculate 90th, 50th and 10th percentile baselines over all prior years
 #  for this DOY
 
@@ -1365,256 +1145,225 @@ rm -f ./$PRODUCT-yr-$subdir/ForWarn2.$YEAR.$DOY.$PRODUCT-yr-baseline.img*
 #  much shorter than case statements!
 #*******************************************************************
 
-#for prioryear in 2002/A 2003/B 2004/C 2005/D 2006/E 2007/F 2008/G 2009/H 2010/I 2011/J 2012/K 2013/L 2014/M 2015/N 2016/O 2017/P 2018/Q 2019/R 2020/S 2021/T 2022/U 2023/V 2024/W 2025/X 2026/Y 2027/Z 2028/AA
 for prioryear in 2003/A 2004/B 2005/C 2006/D 2007/E 2008/F 2009/G 2010/H 2011/I 2012/J 2013/K 2014/L 2015/M 2016/N 2017/O 2018/P 2019/Q 2020/R 2021/S 2022/T 2023/U 2024/V 2025/W 2026/X 2027/Y 2028/Z
 do
+ yr=`echo $prioryear|awk -F/ '{print $1}'`
+ ltr=`echo $prioryear|awk -F/ '{print $2}'`
 
-   yr=`echo $prioryear|awk -F/ '{print $1}'`
-   ltr=`echo $prioryear|awk -F/ '{print $2}'`
+ yrstring=$yrstring" "$yr
+ ltrstring=$ltrstring" "$ltr
 
-   yrstring=$yrstring" "$yr
-   ltrstring=$ltrstring" "$ltr
-
-   if [ $yr -eq $LASTYEAR ]; then
-     break
-   fi
-
+ if [ $yr -eq $LASTYEAR ]; then
+   break
+ fi
 done
 
 #*******************************************************************
 
 
-         if [ ! -f medianallpriormax.$YEAR.$DOY.$TYPE.img ]
-         then
-            echo "File does not exist for medianallpriormax."$YEAR"."$DOY"."$TYPE".img"
+if [ ! -f medianallpriormax.$YEAR.$DOY.$TYPE.img ]
+then
+  echo "File does not exist for medianallpriormax."$YEAR"."$DOY"."$TYPE".img"
 
-first=`
-echo -n "percentile(["
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"<251)*"$cac
-   else
-      echo -n ",("$cac"<251)*"$cac
-   fi
-done
+  first=`
+    echo -n "percentile(["
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"<251)*"$cac
+       else
+          echo -n ",("$cac"<251)*"$cac
+       fi
+    done
 
-echo -en "],50,axis=0)+("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"==254)"
-   else
-      echo -n "&("$cac"==254)"
-   fi
-done
+    echo -en "],50,axis=0)+("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"==254)"
+       else
+          echo -n "&("$cac"==254)"
+       fi
+    done
 
-echo -e ")*0+( ("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"!=254)"
-   else
-      echo -n "|("$cac"!=254)"
-   fi
-done
+    echo -e ")*0+( ("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"!=254)"
+       else
+          echo -n "|("$cac"!=254)"
+       fi
+    done
 
-echo -n ")&("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac">250)"
-   else
-      echo -n "&("$cac">250)"
-   fi
-done
+    echo -n ")&("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac">250)"
+       else
+          echo -n "&("$cac">250)"
+       fi
+    done
 
-echo -n ") )*255"
-`
+    echo -n ") )*255"
+  `
 
-second=`
-yr=2003
-for cac in $ltrstring
-do
-   echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
-   let yr=yr+1
-done
-`
+  second=`
+    yr=2003
+    for cac in $ltrstring
+    do
+       echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
+       let yr=yr+1
+    done
+  `
 
-echo $first
-echo $second
+  echo $first
+  echo $second
 
-gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=medianallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
+  gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=medianallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
-
-#gdal_translate medianallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff medianallpriormax.$YEAR.$DOY.$TYPE.tif
-#rm *.xml
-#gdalinfo -stats -hist medianallpriormax.$YEAR.$DOY.$TYPE.img
-#xv medianallpriormax.$YEAR.$DOY.$TYPE.tif
-
-         else
-            echo "medianallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
-         fi
+else
+  echo "medianallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
+fi
 
 #*******************************************************************
-#*******************************************************************
 
-         if [ ! -f 90thallpriormax.$YEAR.$DOY.$TYPE.img ]
-         then
-            echo "File does not exist for 90thallpriormax."$YEAR"."$DOY"."$TYPE".img"
+if [ ! -f 90thallpriormax.$YEAR.$DOY.$TYPE.img ]
+then
+  echo "File does not exist for 90thallpriormax."$YEAR"."$DOY"."$TYPE".img"
 
+  first=`
+    echo -n "percentile(["
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"<251)*"$cac
+       else
+          echo -n ",("$cac"<251)*"$cac
+       fi
+    done
 
-first=`
-echo -n "percentile(["
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"<251)*"$cac
-   else
-      echo -n ",("$cac"<251)*"$cac
-   fi
-done
+    echo -en "],90,axis=0)+("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"==254)"
+       else
+          echo -n "&("$cac"==254)"
+       fi
+    done
 
-echo -en "],90,axis=0)+("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"==254)"
-   else
-      echo -n "&("$cac"==254)"
-   fi
-done
+    echo -e ")*0+( ("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"!=254)"
+       else
+          echo -n "|("$cac"!=254)"
+       fi
+    done
 
-echo -e ")*0+( ("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"!=254)"
-   else
-      echo -n "|("$cac"!=254)"
-   fi
-done
+    echo -n ")&("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac">250)"
+       else
+          echo -n "&("$cac">250)"
+       fi
+    done
 
-echo -n ")&("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac">250)"
-   else
-      echo -n "&("$cac">250)"
-   fi
-done
+    echo -n ") )*255"
+  `
 
-echo -n ") )*255"
-`
+  second=`
+    yr=2003
+    for cac in $ltrstring
+    do
+       echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
+       let yr=yr+1
+    done
+  `
 
-second=`
-yr=2003
-for cac in $ltrstring
-do
-   echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
-   let yr=yr+1
-done
-`
+  gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=90thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
-#echo $first
-#echo $second
+else
+  echo "90thallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
+fi
 
-gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=90thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
+# START 10thallpriormax
 
-#gdal_translate 90thallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff 90thallpriormax.$YEAR.$DOY.$TYPE.tif
-#rm *.xml
-#gdalinfo -stats -hist 90thallpriormax.$YEAR.$DOY.$TYPE.img
-#xv 90thallpriormax.$YEAR.$DOY.$TYPE.tif
+if [ ! -f 10thallpriormax.$YEAR.$DOY.$TYPE.img ]
+then
+  echo "File does not exist for 10thallpriormax."$YEAR"."$DOY"."$TYPE".img"
 
-         else
-            echo "90thallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
-         fi
+  first=`
+    echo -n "percentile(["
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"<251)*"$cac
+       else
+          echo -n ",("$cac"<251)*"$cac
+       fi
+    done
 
-#*******************************************************************
-#*******************************************************************
-#*******************************************************************
+    echo -en "],10,axis=0)+("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"==254)"
+       else
+          echo -n "&("$cac"==254)"
+       fi
+    done
 
-         if [ ! -f 10thallpriormax.$YEAR.$DOY.$TYPE.img ]
-         then
-            echo "File does not exist for 10thallpriormax."$YEAR"."$DOY"."$TYPE".img"
+    echo -e ")*0+( ("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac"!=254)"
+       else
+          echo -n "|("$cac"!=254)"
+       fi
+    done
 
+    echo -n ")&("
+    for cac in $ltrstring
+    do
+       if [ $cac == A ]; then
+          echo -n "("$cac">250)"
+       else
+          echo -n "&("$cac">250)"
+       fi
+    done
 
-first=`
-echo -n "percentile(["
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"<251)*"$cac
-   else
-      echo -n ",("$cac"<251)*"$cac
-   fi
-done
+    echo -n ") )*255"
+  `
 
-echo -en "],10,axis=0)+("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"==254)"
-   else
-      echo -n "&("$cac"==254)"
-   fi
-done
+  second=`
+    yr=2003
+    for cac in $ltrstring
+    do
+       echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
+       let yr=yr+1
+    done
+  `
 
-echo -e ")*0+( ("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac"!=254)"
-   else
-      echo -n "|("$cac"!=254)"
-   fi
-done
+  gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
 
-echo -n ")&("
-for cac in $ltrstring
-do
-   if [ $cac == A ]; then
-      echo -n "("$cac">250)"
-   else
-      echo -n "&("$cac">250)"
-   fi
-done
+else
+  echo "10thallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
+fi
 
-echo -n ") )*255"
-`
-
-second=`
-yr=2003
-for cac in $ltrstring
-do
-   echo -n " -"$cac" maxMODISmax."$yr".$DOY.$TYPE.img "
-   let yr=yr+1
-done
-`
-
-#echo $first
-#echo $second
-
-gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=10thallpriormax.$YEAR.$DOY.$TYPE.img --type=Byte --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --overwrite
-
-#gdal_translate 10thallpriormax.$YEAR.$DOY.$TYPE.img -of GTiff 10thallpriormax.$YEAR.$DOY.$TYPE.tif
-#rm *.xml
-#gdalinfo -stats -hist 10thallpriormax.$YEAR.$DOY.$TYPE.img
-#xv 10thallpriormax.$YEAR.$DOY.$TYPE.tif
-
-         else
-            echo "10thallpriormax."$YEAR"."$DOY"."$TYPE".img file already exists"
-         fi
-
-#*******************************************************************
 #*******************************************************************
 ##### this is an example of the gdal_calc.py --debug code that this code writes ###
 #*******************************************************************
 # calculate mean, max, 90th and 50th median baselines over all prior years
 #  for this DOY
 #case $numyrsprior in
-   #16)		# 2019 thru P
+   #16)   # 2019 thru P
 #   
 #gdal_calc.py --debug --calc="\
 #percentile([\
@@ -1817,341 +1566,230 @@ gdal_calc.py --debug --calc="`echo $first`" `echo $second` --outfile=10thallprio
 #
 #;;
 
-
-
-
 #################################################################
 
 ########  90th percentile all prior max products ##############################
 
+if [ ! -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img ]
+then
 
-         if [ ! -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img ]
-         then
-            echo "File does not exist for ./pctprogress/ForWarnLAEA.pctprogressallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img"
+  echo "File does not exist for ./pctprogress/ForWarnLAEA.pctprogressallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img"
 
+  # calculate the pctprogressallpriormax product for this $DOY using this baseline
+  # standard way, (observed-expected)/expected NDVI
+  # clamp departure values between 2 and 254
+  # if either current or baseline is 254 water, then 0 water
+  # if BOTH current AND baseline are 255 no value, then 255 no value
+  # 252 is nodata coming in
+  # 1 is nodata going out
+  # 0 = water
+  # 255 = no NDVI value
+  echo "Calculating pctprogress all prior max product ..."
+  gdal_calc.py --debug --calc="\
+  ((A<251)&(B<251)&(C<251))*\
+  round_(((\
+  (A.astype(float)-C.astype(float)) / (C.astype(float)-B.astype(float)).clip(1)\
+  )*128+127).clip(2,254)).astype(uint8)\
+  +((A==254)|(B==254)|(C==254))*0\
+  +(( (A!=254)|(B!=254)|(C!=254) )&( (A>250)&(B>250)&(C>250) ))*255\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B 10thallpriormax.$YEAR.$DOY.$TYPE.img -C medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
-      # calculate the pctprogressallpriormax product for this $DOY using this baseline
-# standard way, (observed-expected)/expected NDVI
-# clamp departure values between 2 and 254
-# if either current or baseline is 254 water, then 0 water
-# if BOTH current AND baseline are 255 no value, then 255 no value
+  # split and reproject ForWarn pctprogress all prior max product
+  # split out two mask categories, 0 water and 255 nodata from all prior max product
+  # use 128 as a fill value, but not as nodata
+  # 1 is nodata coming in
+  # 1 is nodata going out
+  # use 128 as a fill value
+  echo "Splitting out two mask categories from ForWarn pctprogress product ..."
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((A>1)&(A<255))*128\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
-# 252 is nodata coming in
-# 1 is nodata going out
+  echo "Splitting out data from two masks in ForWarn pctprogressallpriormax product ..."
+  # use 1 as a fill value
+  gdal_calc.py --debug --calc="\
+  ((A>1)&(A<255))*A\
+  +((A==0)|(A==255))*1\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-# 0 = water
-# 255 = no NDVI value
+  # reproject ForWarn pctprogressallpriormax product to LAEA
+  # reproject masks and data separately, and re-join
+  echo "Warping ForWarn pctprogressallpriormax product data with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
+  rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-echo "Calculating pctprogress all prior max product ..."
-#(((A.astype(float)-B.astype(float)) / (C.astype(float)-B.astype(float).clip(1)))-1.0)\
+  echo "Warping ForWarn pctprogressallpriormax product masks with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
+  rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251)&(C<251))*\
-round_(((\
-(A.astype(float)-C.astype(float)) / (C.astype(float)-B.astype(float)).clip(1)\
-)*128+127).clip(2,254)).astype(uint8)\
-+((A==254)|(B==254)|(C==254))*0\
-+(( (A!=254)|(B!=254)|(C!=254) )&( (A>250)&(B>250)&(C>250) ))*255\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B 10thallpriormax.$YEAR.$DOY.$TYPE.img -C medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#gdal_translate ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
+  echo "Rejoining ForWarn pctprogressallpriormax product masks with data"
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((B>1)&(B<255))*B\
+  " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
+  rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
+  # take out the trash
+  rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
 
-# split and reproject ForWarn pctprogress all prior max product
-# split out two mask categories, 0 water and 255 nodata from all prior max product
-# use 128 as a fill value, but not as nodata
+  echo "pctprogressallpriormax is done!"
 
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ForWarn pctprogress product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Splitting out data from two masks in ForWarn pctprogressallpriormax product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-#################################################################
-# reproject ForWarn pctprogressallpriormax product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ForWarn pctprogressallpriormax product data with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
-rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-echo "Warping ForWarn pctprogressallpriormax product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
-rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Rejoining ForWarn pctprogressallpriormax product masks with data"
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
-rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#gdal_translate ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-
-
-# take out the trash
-rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f ./pctprogress/ForWarnLAEA.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f ./pctprogress/ForWarn.pctprogressallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
-
-         echo "pctprogressallpriormax is done!"
-
-         else
-            echo "./pctprogress/ForWarnLAEA.pctprogressallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
-         fi
-
-#################################################################
-#################################################################
+else
+  echo "./pctprogress/ForWarnLAEA.pctprogressallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
+fi
 
 ########  median of all prior max products ################################
 
 
-         if [ ! -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$TYPE.img ]
-         then
+if [ ! -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$TYPE.img ]
+then
 
+  # calculate the medianallpriormax product for this $DOY using this baseline
 
-      # calculate the medianallpriormax product for this $DOY using this baseline
+  # if either is 254 water, then 0 water
+  # if either is NOT 254 water, and both are mask values, then 255 no value
 
-# if either is 254 water, then 0 water
-# if either is NOT 254 water, and both are mask values, then 255 no value
+  # 252 is nodata coming in
+  # 255 is nodata going out
 
-# 252 is nodata coming in
-# 255 is nodata going out
+  # 0 = water
+  # 255 = no NDVI value
 
-# 0 = water
-# 255 = no NDVI value
+  echo "Calculating median of allpriormax product ..."
 
-echo "Calculating median of allpriormax product ..."
+  gdal_calc.py --debug --calc="\
+  ((A<251)&(B<251))*\
+  round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
+  +((A==254)&(B==254))*0\
+  +(( (A!=254)|(B!=254) )&( (A>250)&(B>250) ))*255\
+  " --NoDataValue=255 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
 
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251))*\
-round_(( (A.astype(float)-B.astype(float))/ B.clip(1).astype(float)*128+127).clip(2,254)).astype(uint8)\
-+((A==254)&(B==254))*0\
-+(( (A!=254)|(B!=254) )&( (A>250)&(B>250) ))*255\
-" --NoDataValue=255 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  # split and reproject median of all prior max product
+  # split out two mask categories, 0 water and 255 nodata from medianall prior max product
+  # use 128 as a fill value, but not as nodata
+  # 1 is nodata coming in
+  # 1 is nodata going out
+  # use 128 as a fill value
+  echo "Splitting out two mask categories from ForWarn medianallpriormax product ..."
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((A>1)&(A<255))*128\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
+  echo "Splitting out data from two masks in ForWarn medianallpriormax product ..."
+  # use 1 as a fill value
+  gdal_calc.py --debug --calc="\
+  ((A>1)&(A<255))*A\
+  +((A==0)|(A==255))*1\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-      # split and reproject median of all prior max product
-# split out two mask categories, 0 water and 255 nodata from medianall prior max product
-# use 128 as a fill value, but not as nodata
+  # reproject ForWarn medianallpriormax product to LAEA
+  # reproject masks and data separately, and re-join
+  echo "Warping ForWarn medianallpriormax product data with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-# 1 is nodata coming in
-# 1 is nodata going out
+  echo "Warping ForWarn medianallpriormax product masks with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
-# use 128 as a fill value
+  echo "Rejoining ForWarn medianallpriormax product masks with data"
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((B>1)&(B<255))*B\
+  " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
-echo "Splitting out two mask categories from ForWarn medianallpriormax product ..."
+  # take out the trash
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
 
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Splitting out data from two masks in ForWarn medianallpriormax product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-#################################################################
-# reproject ForWarn medianallpriormax product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ForWarn medianallpriormax product data with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-echo "Warping ForWarn medianallpriormax product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Rejoining ForWarn medianallpriormax product masks with data"
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-
-# take out the trash
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarnLAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
-
-
-         else
-            echo $medianallyrmaxpath"/median-all-yr-max/ForWarnLAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
-         fi
+else
+  echo $medianallyrmaxpath"/median-all-yr-max/ForWarnLAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
+fi
 
 ########  median of all prior max sqrt product #################################
 
-         if [ ! -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img ]
-         then
-            echo "File does not exist for "$medianallyrmaxpath"/median-all-yr-max/ForWarn2LAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img"
+if [ ! -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img ]
+then
+  echo "File does not exist for "$medianallyrmaxpath"/median-all-yr-max/ForWarn2LAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img"
 
+  # calculate the medianallpriormax sqrt product for this $DOY using this baseline
+  # if either is 254 water, then 0 water
+  # if BOTH are NOT 254 water, and both are mask values, then 255 no value
+  # 255 is nodata coming in
+  # 255 is nodata going out
+  # 0 = water
+  # 255 = no NDVI value
+  echo "Calculating median of allpriormax sqrt product ..."
+  gdal_calc.py --debug --calc="\
+  ((A<251)&(B<251))*\
+  round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
+  +((A==254)&(B==254))*0\
+  +(( (A!=254)|(B!=254) )&( (A>250)&(B>250) ))*255\
+  " --NoDataValue=255 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
-      # calculate the medianallpriormax sqrt product for this $DOY using this baseline
+  # split and reproject median of all prior max sqrt product
+  # split out two mask categories, 0 water and 255 nodata from medianall prior max product
+  # use 128 as a fill value, but not as nodata
+  # 1 is nodata coming in
+  # 1 is nodata going out
+  # use 128 as a fill value
+  echo "Splitting out two mask categories from ForWarn medianallpriormax sqrt product ..."
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((A>1)&(A<255))*128\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
-# if either is 254 water, then 0 water
-# if BOTH are NOT 254 water, and both are mask values, then 255 no value
+  echo "Splitting out data from two masks in ForWarn medianallpriormax sqrt product ..."
+  # use 1 as a fill value
+  gdal_calc.py --debug --calc="\
+  ((A>1)&(A<255))*A\
+  +((A==0)|(A==255))*1\
+  " --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-# 255 is nodata coming in
-# 255 is nodata going out
+  # reproject ForWarn medianallpriormax sqrt product to LAEA
+  # reproject masks and data separately, and re-join
+  echo "Warping ForWarn medianallpriormax sqrt product data with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
 
-# 0 = water
-# 255 = no NDVI value
+  echo "Warping ForWarn medianallpriormax sqrt product masks with gdalwarp"
+  gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
 
-echo "Calculating median of allpriormax sqrt product ..."
+  echo "Rejoining ForWarn medianallpriormax sqrt product masks with data"
+  gdal_calc.py --debug --calc="\
+  ((A==0)|(A==255))*A\
+  +((B>1)&(B<255))*B\
+  " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
 
-gdal_calc.py --debug --calc="\
-((A<251)&(B<251))*\
-round_(( ((A.astype(float)*0.004)-(B.astype(float)*0.004))/ sqrt((B.astype(float)*0.004).clip(1).astype(float))*128+127).clip(2,254)).astype(uint8)\
-+((A==254)&(B==254))*0\
-+(( (A!=254)|(B!=254) )&( (A>250)&(B>250) ))*255\
-" --NoDataValue=255 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" -A maxMODISmax.$YEAR.$DOY.$THIRDDATETYPE.img -B medianallpriormax.$YEAR.$DOY.$TYPE.img --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#gdal_translate ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv ./median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
+  # take out the trash
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
+  rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
 
+else
+  echo $medianallyrmaxpath"/median-all-yr-max/ForWarn2LAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
+fi
 
-      # split and reproject median of all prior max sqrt product
-# split out two mask categories, 0 water and 255 nodata from medianall prior max product
-# use 128 as a fill value, but not as nodata
-
-# 1 is nodata coming in
-# 1 is nodata going out
-
-# use 128 as a fill value
-
-echo "Splitting out two mask categories from ForWarn medianallpriormax sqrt product ..."
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((A>1)&(A<255))*128\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Splitting out data from two masks in ForWarn medianallpriormax sqrt product ..."
-
-# use 1 as a fill value
-
-gdal_calc.py --debug --calc="\
-((A>1)&(A<255))*A\
-+((A==0)|(A==255))*1\
-" --NoDataValue=1 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-#################################################################
-# reproject ForWarn medianallpriormax sqrt product to LAEA
-# reproject masks and data separately, and re-join
-
-echo "Warping ForWarn medianallpriormax sqrt product data with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -r bilinear -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.tif
-
-
-echo "Warping ForWarn medianallpriormax sqrt product masks with gdalwarp"
-
-gdalwarp -overwrite -multi -t_srs laea.prj -wm 500 -tr 231.656358264000005 231.656358264000005 -srcnodata 1 -dstnodata None -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.tif
-
-
-echo "Rejoining ForWarn medianallpriormax sqrt product masks with data"
-
-gdal_calc.py --debug --calc="\
-((A==0)|(A==255))*A\
-+((B>1)&(B<255))*B\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=$medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img  -A $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img -B $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img --type=Byte --overwrite
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#gdal_translate $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img -of GTiff $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-#xv $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.tif
-
-# take out the trash
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2LAEA.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.data.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.masks.img*
-rm -f $medianallyrmaxpath/median-all-yr-max/ForWarn2.medianallpriormax.$YEAR.$DOY.$THIRDDATETYPE.img*
-
-
-         else
-            echo $medianallyrmaxpath"/median-all-yr-max/ForWarn2LAEA.medianallpriormax."$YEAR"."$DOY"."$THIRDDATETYPE".img file already exists"
-         fi
-
-#################################################################
-
-   echo "ALL products have been generated!  DONE!"
-
-   ##else
-      ##echo "Products already appear to exist for " $YEAR $DOY
-##fi
-
+echo "ALL products have been generated!  DONE!"

@@ -31,7 +31,15 @@ import argparse
 from subprocess import Popen, PIPE, STDOUT, check_output
 from tempfile import NamedTemporaryFile
 
+from make_links import make_links
+
 from Config import *
+
+TODO_DAYS_PATH = 'todo_product_days'
+ALL_DAYS_PATH = 'all_product_days'
+DODATE_PATH = './dodate'
+
+intervals = [ ("361","353","345"), ("353","345","337"), ("345","337","329"), ("337","329","321"), ("329","321","313"), ("321","313","305"), ("313","305","297"), ("305","297","289"), ("297","289","281"), ("289","281","273"), ("281","273","265"), ("273","265","257"), ("265","257","249"), ("257","249","241"), ("249","241","233"), ("241","233","225"), ("233","225","217"), ("225","217","209"), ("217","209","201"), ("209","201","193"), ("201","193","185"), ("193","185","177"), ("185","177","169"), ("177","169","161"), ("169","161","153"), ("161","153","145"), ("153","145","137"), ("145","137","129"), ("137","129","121"), ("129","121","113"), ("121","113","105"), ("113","105","097"), ("105","097","089"), ("097","089","081"), ("089","081","073"), ("081","073","065"), ("073","065","057"), ("065","057","049"), ("057","049","041"), ("049","041","033"), ("041","033","025"), ("033","025","017"), ("025","017","009"), ("017","009","001"), ("009","001","361"), ("001","361","353") ]
 
 
 def pad_with_zero(num):
@@ -50,7 +58,9 @@ def setup_logging(dryrun, is_cli_run):
   dryrun_text = 'dryrun_' if dryrun else ''
   cli_run_text = 'cli_run_' if is_cli_run else ''
   log_filename = '{0}{1}{2}{3}{4}_{5}h{6}m{7}s.txt'.format(dryrun_text, cli_run_text, now.year, month, day, hour, minute, second)
-  log_path = os.path.join(MAIN_PATH, 'logs', log_filename)
+  log_path = os.path.join('.', 'logs', log_filename)
+  if not os.path.isdir(os.path.join('.', 'logs')):
+    os.mkdir('./logs')
   logging.basicConfig(filename=log_path, level=logging.DEBUG)
   logger = logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
   return log_path
@@ -69,7 +79,7 @@ def products_exist(d):
   for source in SOURCE_DIRS:
     for key in PRODUCT_DIRS:
       prod_dir = PRODUCT_DIRS[key]
-      path = os.path.join(PRODUCTS_BASE_PATH, source, prod_dir)
+      path = os.path.join('.', source, prod_dir)
       if not os.path.exists(path) or (source == 'ForWarn2_Sqrt' and key == 'pctprogress'):
         continue
       files = os.listdir(path)
@@ -84,9 +94,9 @@ def renamed(filename):
   if m:
     pieces = list(m.groups())
     year = '{0}'.format(pieces[1])
-    doy = '{0}'.format(int(pieces[2]) + 7)
+    jd = '{0}'.format(int(pieces[2]) + 7)
     try:
-      date = datetime.datetime.strptime('{0}{1}'.format(year, doy), '%Y%j')
+      date = datetime.datetime.strptime('{0}{1}'.format(year, jd), '%Y%j')
       datestring = date.strftime('%Y%m%d')
     except ValueError as e:
       logging.error("ValueError trying to make date for file {0}".format(filename, datestring))
@@ -101,7 +111,7 @@ def renamed(filename):
 def make_test_file(start_text, product_dir, datestring):
   year = datestring[:4]
   jd = datestring[-3:]
-  test = open(os.path.join(MAIN_PATH, product_dir, "TEST_{0}.{1}.{2}".format(start_text, year, jd)), 'a')
+  test = open(os.path.join('.', product_dir, "TEST_{0}.{1}.{2}".format(start_text, year, jd)), 'a')
 
 
 def destroy_test_files():
@@ -111,9 +121,9 @@ def destroy_test_files():
       if src_dir == 'ForWarn2_Sqrt' and key == 'pctprogress':
         continue
       prod_dir = PRODUCT_DIRS[key]
-      files = [ p for p in os.listdir(os.path.join(MAIN_PATH, src_dir, prod_dir)) if 'TEST' in p ]
+      files = [ p for p in os.listdir(os.path.join('.', src_dir, prod_dir)) if 'TEST' in p ]
       for f in files:
-        os.remove(os.path.join(MAIN_PATH, src_dir, prod_dir, f))
+        os.remove(os.path.join('.', src_dir, prod_dir, f))
 
 
 def harvest_products(datestring, dryrun):
@@ -122,7 +132,7 @@ def harvest_products(datestring, dryrun):
     fw2_check = 'ForWarnLAEA' if key != 'ALC' else 'ALCLAEA'
     fw2_sqrt_check = 'ForWarn2LAEA' if key != 'ALC' else 'ALC2LAEA'
     
-    path = os.path.join(MAIN_PATH, key)
+    path = os.path.join('.', key)
     
     year = datestring[:4]
     day = datestring[-3:]
@@ -142,8 +152,8 @@ def harvest_products(datestring, dryrun):
       else:
         continue
       old_fullpath = os.path.join(path, f)
-      new_fullpath = os.path.join(PRODUCTS_BASE_PATH, source_dir, PRODUCT_DIRS[key], renamed(f))
-      if os.path.isdir(os.path.join(PRODUCTS_BASE_PATH, source_dir, PRODUCT_DIRS[key])):
+      new_fullpath = os.path.join('.', source_dir, PRODUCT_DIRS[key], renamed(f))
+      if os.path.isdir(os.path.join('.', source_dir, PRODUCT_DIRS[key])):
         logging.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, datestring))
         shutil.copyfile(old_fullpath, new_fullpath)
       os.remove(old_fullpath)
@@ -213,7 +223,6 @@ def get_all_todo_days():
 
 def get_todo_dates(overwrite):
   days = get_all_todo_days()
-  # TODO: test this!
   if not len(days):
     reset_todo_dates_file()
   today = datetime.datetime.today()
@@ -230,7 +239,6 @@ def get_todo_dates(overwrite):
 
 
 def build_products_for_date(datestring, dryrun, log_path):
-  os.chdir(os.path.join(MAIN_PATH))
   c = [ DODATE_PATH, datestring ]
   if not dryrun:
     try:
@@ -240,7 +248,6 @@ def build_products_for_date(datestring, dryrun, log_path):
         log_subprocess_output(process.stdout)
       exitcode = process.wait()
     except Exception as e:
-      mail_results(False, datestring, dryrun, log_path)
       logging.error("Exception while running dodate script.\n")
       logging.error(e)
 
@@ -257,6 +264,55 @@ def write_new_todo_days_file(days_to_remove, dryrun):
       f.write(new_file_contents)
   else:
     logging.info("Since this is a dryrun we're not going to write a new todo_product_days file. But just for fun, this is what the contents of the new file would be:\n{0}".format(new_file_contents))
+
+
+def get_three_dates(year, jd):
+  days = list(filter(lambda trip: trip[0] == jd, intervals))[0]
+  if not len(days):
+    print "Invalid day of year"
+    sys.exit()
+  days = list(map(lambda d: (d, year), days))
+  # jd == 009 or jd == 001 is a special case where the year is not consistent
+  if jd == '009':
+    days[2] = ( '361', str(int(year)-1) )
+  if jd == '001':
+    days[1] = ( '361', str(int(year)-1) )
+    days[2] = ( '353', str(int(year)-1) )
+  print days
+  return days
+
+
+def make_symlinks_for_dates(dates):
+  precursor_base_dir = './precursors'
+  jds = []
+  for datestring in dates:
+    year = datestring[:4]
+    jd = datestring[-3:]
+    jd_dir = os.path.join(precursor_base_dir, jd)
+    three_jds = [ d[0] for d in get_three_dates(year, jd) ]
+    jds.extend(three_jds)
+  jds = set(jds)
+  for jd in list(jds):
+    make_links(precursor_base_dir, '.', ".*\d{4}\."+jd+".*\.img") 
+
+
+def move_new_precursors(ext='.img'):
+  all_jds = []
+  with open(ALL_DAYS_PATH) as f:
+    all_jds = [ line.strip() for line in f.readlines() ]
+  for f in os.listdir('.'):
+    if f.endswith(ext) and not os.path.islink(f):
+      for jd in all_jds:
+        if re.search(".*\d{4}\."+jd+".*"+ext+"$", f):
+          new_path = os.path.join(PRECURSOR_DIR, jd, f)
+          shutil.move(f, new_path)
+          continue
+      
+
+def destroy_symlinks(ext='.img'):
+  for f in os.listdir('.'):
+    if os.path.islink(f) and f.endswith('{}'.format(ext)):
+      os.remove(f) 
 
 
 def build_products(dates, dryrun, is_cli_run, log_path, no_email):
@@ -285,8 +341,6 @@ def build_products(dates, dryrun, is_cli_run, log_path, no_email):
       mail_results(success, datestring, dryrun, log_path)
   if not is_cli_run:
     write_new_todo_days_file(days_to_remove, dryrun)    
-  if dryrun:
-    destroy_test_files()
 
 
 def is_date_argument_ok(arg):
@@ -351,7 +405,8 @@ def check_is_only_instance_or_quit():
 
 
 def main():
-  os.chdir(MAIN_PATH)
+  dir_path = os.path.dirname(os.path.realpath(__file__))
+  os.chdir(os.path.join(dir_path))
   parser = setup_arg_parser()
   args = parser.parse_args()
   overwrite = args.overwrite
@@ -373,7 +428,11 @@ def main():
     os.remove(log_path)
     sys.exit(0)
 
+  make_symlinks_for_dates(dates)
   build_products(dates, dryrun, is_cli_run, log_path, no_email)
+  destroy_symlinks()
+  move_new_precursors()
+
 
 if __name__ == '__main__':
   main()

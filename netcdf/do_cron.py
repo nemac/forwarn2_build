@@ -20,8 +20,6 @@ def get_all_todo_days():
 
 def get_todo_dates():
   days = get_all_todo_days() # TODO: test this!
-  if not len(days):
-    reset_todo_dates_file()
   today = datetime.datetime.today()
   today = today.strftime('%Y%j')
   today = datetime.datetime.strptime(today, '%Y%j')
