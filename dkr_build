@@ -1,0 +1,7 @@
+#!/bin/bash
+
+source .env
+
+cd ./docker
+
+docker build -t $DKR_IMAGE_TAG .
