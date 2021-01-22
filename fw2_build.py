@@ -7,8 +7,6 @@ import logging as log
 from subprocess import check_output
 from tempfile import NamedTemporaryFile
 
-from config import *
-
 from util import \
   init_log, \
   try_func, \
@@ -55,7 +53,7 @@ def main():
 
 def all_tasks():
   '''The main task cycle for ForWarn 2. Builds any missing precursors, updates the graph data files, and builds any missing ForWarn 2 products.'''
-  log.info('Starting ForWarn 2 production cycle at {}...'.format(get_now_est()))
+  log.info('Starting ForWarn 2 production cycle at {} (EST)...'.format(get_now_est()))
 
   # New precursors
   log.info("Building new 8-day maximum precursors...")
@@ -120,7 +118,7 @@ def build_all_8day_max_files_for_product_type(product_type):
   if len(todo):
     at_least_one_success = False
     for d in todo:
-      exitcode = build_8day_max_for(product_type, d['year'], d['jd'])
+      nxitcode = build_8day_max_for(product_type, d['year'], d['jd'])
       if int(exitcode) == 0:
         at_least_one_success = True
         new_products.append(d)

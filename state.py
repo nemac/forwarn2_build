@@ -3,7 +3,6 @@ from subprocess import Popen, PIPE, STDOUT, check_output
 import os, os.path, sys, re, traceback, shutil, datetime
 import logging as log
 
-from config import *
 from util import *
 
 
@@ -150,6 +149,19 @@ def fw2_products_exist(date_config):
   date = get_datetime_for_year_jd(year, jd)
   file_date = date + datetime.timedelta(days=7)
   datestring = file_date.strftime('%Y%m%d')
+  # Keys are directories used by the dodate bash script to place output files
+  # Values are the corresponding directory names in the product archive.
+  PRODUCT_DIR_MAP={
+    '1-yr-max' : 'X_LC_1YEAR',
+    '10-yr-90' : 'X_LC_90_10_YR',
+    '3-yr-max' : 'X_LC_3YEAR',
+    '5-yr-90'  : 'X_LC_5YEAR',
+    'ALC'      : 'X_LC_ALC_1YR',
+    'median-all-yr-max' : 'X_LC_MEDIAN_ALL_YR',
+    'pctprogress' : 'X_LC_PCTPROGRESS'
+  }
+
+  SOURCE_DIRS=[ 'ForWarn2', 'ForWarn2_Sqrt' ]
 
   all_products_exist = True
   

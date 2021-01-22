@@ -5,11 +5,33 @@ from pytz import timezone
 
 import logging as log
 
-from config import *
+# Some helpful constants
+
+ALL_MODIS_JULIAN_DAYS=("001", "009", "017", "025", "033", "041", "049", "057", "065", "073", "081", "089", "097", "105", "113", "121", "129", "137", "145", "153", "161", "169", "177", "185", "193", "201", "209", "217", "225", "233", "241", "249", "257", "265", "273", "281", "289", "297", "305", "313", "321", "329", "337", "345", "353", "361")
+
+# ForWarn 2 products are not built for day 361
+ALL_FW2_JULIAN_DAYS=ALL_MODIS_JULIAN_DAYS[:-1]
+
+INTERVALS=[ ("361","353","345"), ("353","345","337"), ("345","337","329"), ("337","329","321"), ("329","321","313"), ("321","313","305"), ("313","305","297"), ("305","297","289"), ("297","289","281"), ("289","281","273"), ("281","273","265"), ("273","265","257"), ("265","257","249"), ("257","249","241"), ("249","241","233"), ("241","233","225"), ("233","225","217"), ("225","217","209"), ("217","209","201"), ("209","201","193"), ("201","193","185"), ("193","185","177"), ("185","177","169"), ("177","169","161"), ("169","161","153"), ("161","153","145"), ("153","145","137"), ("145","137","129"), ("137","129","121"), ("129","121","113"), ("121","113","105"), ("113","105","097"), ("105","097","089"), ("097","089","081"), ("089","081","073"), ("081","073","065"), ("073","065","057"), ("065","057","049"), ("057","049","041"), ("049","041","033"), ("041","033","025"), ("033","025","017"), ("025","017","009"), ("017","009","001"), ("009","001","361"), ("001","361","353") ]
 
 
-def get_now_est(formatted=True, time_format='%Y-%m-%d %I:%M:%S%p'):
-  tz = 'US/Eastern'
+def load_env():
+  '''Load the variables defined in .env into the globals dictionary.'''
+  with open('.env') as f:
+    lines = [ line.strip() for line in f.readlines() ]
+    lines = filter(lambda line: '=' in line and not line.startswith('#'), lines)
+    env = [ line.split('=') for line in lines ]
+    _globals = globals()
+    for key, val in env:
+      _globals[key] = val
+
+
+# Load the environment variables now
+load_env()
+
+
+def get_now_est(formatted=True, time_format='%Y-%m-%d %I:%M:%S%p', tz='US/Eastern'):
+  '''Do you have the time?'''
   now = datetime.datetime.now(timezone(tz)) 
   if formatted:
     return now.strftime(time_format)
@@ -128,7 +150,7 @@ def get_year_jd_config_for_datetime(date):
 def validate_modis_yr_jd(year, jd):
   '''Throw an exception if a given year or julian day is invalid.'''
   today_year = datetime.datetime.today().strftime('%Y')
-  if int(year) < MODIS_DATA_YEAR_START or int(year) > int(today_year):
+  if int(year) < int(MODIS_DATA_YEAR_START) or int(year) > int(today_year):
     raise ValueError('Bad year given. Must be a four-digit number in the range {}-{}.'.format(MODIS_DATA_YEAR_START, today_year))
   if str(jd) not in ALL_MODIS_JULIAN_DAYS:
     raise ValueError('Bad julian day given. Must be one of: {}'.format(', '.join(ALL_MODIS_JULIAN_DAYS)))
