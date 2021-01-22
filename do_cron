@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./dkr_run "python3 ./fw2_build.py --cron"

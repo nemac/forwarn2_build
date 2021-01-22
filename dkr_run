@@ -1,9 +1,11 @@
 #!/bin/bash
 
+source .env
+
 docker run --rm -it \
   -v $PWD:/build \
   -v $PWD/ForWarn2:/build/ForWarn2 \
   -v $PWD/ForWarn2_Sqrt:/build/ForWarn2_Sqrt \
   -v $PWD/precursors:/build/precursors \
   -v $PWD/graph_data:/build/graph_data \
-  gdal:2.4.2 $1
+  $DKR_IMAGE_TAG $1

@@ -1,20 +1,69 @@
 
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, check_output
 import os, os.path, sys, re, traceback, shutil, datetime
 import logging as log
 
+from config import *
+from util import *
 
 
-############################# STATE HELPERS ##############################################
+############################# CHANGE STATE ##############################################
+
+
+def delete_symlinks_by_ext(ext='.img'):
+  '''Delete any symlinks in the current directory that have a certain file extension (default is '.img')'''
+  log.debug("Cleaning up environment...".format(ext))
+  for f in os.listdir('.'):
+    if os.path.islink(f) and f.endswith(ext) and not os.path.isdir(f):
+      os.remove(f) 
+
+
+def delete_nrt_8day_max_files_with_existing_std():
+  # TODO this is not working
+  '''Removes all NRT 8-day max files if an STD file already exists for the same period.'''
+  jds = ALL_MODIS_JULIAN_DAYS
+  found_at_least_one_nrt_to_remove = False
+  for jd in jds:
+    f_tpl = 'maxMODIS.{}.{}.{}.img'
+    folder = os.path.join(PRECURSORS_DIR, jd)
+    for year in get_all_modis_data_years():
+      std_path = os.path.join(folder, f_tpl.format(year, jd, 'std'))
+      nrt_path = os.path.join(folder, f_tpl.format(year, jd, 'nrt'))
+      if os.path.exists(std_path) and os.path.exists(nrt_path):
+        found_at_least_one_nrt_to_remove = True
+        log.info("Deleting {} (std version already exists)...".format(nrt_path))
+        try_func(os.remove, nrt_path)
+
+
+def check_is_only_instance_or_quit():
+  name_of_this_script = sys.argv[0].split('/').pop()
+  command = "ps -aux | grep %s" % name_of_this_script
+  stdout = str(check_output(command, shell=True))
+  lines = stdout.split('\n')
+  # Remove empty strings made from the split command
+  # Remove entries related to the grep command run as part of the process
+  lines = [ line for line in lines if line != '' and 'grep' not in line ]
+  if (len(lines) > 1):
+    # One entry refers to this instance of the script.
+    # More than one entry means there is another instance of the script running.
+    logging.info("Another instance of {} is already running! Or it's open in a text editor (LOL). Exiting...".format(name_of_this_script))
+    sys.exit() 
+
+
+############################# GET STATE ##############################################
 
 
 def get_todo_dates_fw2_products():
-  '''Returns a list of MODIS product dates in the past two years for which:
+  '''Get a list of potential dates for which ForWarn 2 products may be built.
 
-  1. Enough time has passed that NRT data for that date may be available..
+  Return a list of MODIS product dates in the past two years for which:
+
+  1. Enough time has passed that NRT data for that date may be available.
   2. A complete set of ForWarn 2 products does not exist.
+
+  In theory NRT data should be available for these dates, but it's possible the data is late.
   '''
-  all_days = ALL_MODIS_JULIAN_DAYS
+  all_days = ALL_FW2_JULIAN_DAYS
   today = datetime.datetime.today()
   today_year = today.strftime('%Y')
   last_year = str(int(today_year) - 1)
@@ -61,22 +110,6 @@ def get_todo_dates_8day_max(product_type, include_all_std_years=True, exclude_nr
   return list(todo_days)
 
 
-def delete_nrt_8day_max_files_with_existing_std():
-  '''Removes all NRT 8-day max files if an STD file already exists for the same period.'''
-  jds = ALL_MODIS_JULIAN_DAYS
-  found_at_least_one_nrt_to_remove = False
-  for jd in jds:
-    f_tpl = 'maxMODIS.{}.{}.{}.img'
-    folder = os.path.join(PRECURSORS_DIR, jd)
-    for year in get_all_modis_data_years():
-      std_path = os.path.join(folder, f_tpl.format(year, jd, 'std'))
-      nrt_path = os.path.join(folder, f_tpl.format(year, jd, 'nrt'))
-      if os.path.exists(std_path) and os.path.exists(nrt_path):
-        found_at_least_one_nrt_to_remove = True
-        log.info("Deleting {} (STD exists)...".format(nrt_path))
-        try_func(os.remove, nrt_path)
-
-
 def modis_8day_max_file_exists(year, jd, product_type, ext='img', verbose=False):
   tpl = MAX_8DAY_PRECURSOR_FILENAME_TEMPLATE
   f = tpl.format(year, jd, product_type, ext)
@@ -107,23 +140,48 @@ def filter_unavailable_modis_dates(dates):
 
 
 def fw2_products_exist(date_config):
+  '''Return True if a full set of products exist for the given date.
+
+  Arguments:
+    date_config: dict of the form { 'year': 'YYYY', 'jd': 'DOY' }
+  '''
   year = date_config['year']
   jd = date_config['jd']
   date = get_datetime_for_year_jd(year, jd)
   file_date = date + datetime.timedelta(days=7)
-  datestring = date.strftime('%Y%m%d')
+  datestring = file_date.strftime('%Y%m%d')
+
+  all_products_exist = True
   
   for source in SOURCE_DIRS:
-    for key in PRODUCT_DIRS:
-      prod_dir = PRODUCT_DIRS[key]
-      path = os.path.join('.', source, prod_dir)
-      # There is no square root % progress product, so skip this combination
-      if not os.path.exists(path) or (source == 'ForWarn2_Sqrt' and key == 'pctprogress'):
+    for dodate_dir in PRODUCT_DIR_MAP:
+      prod_dir = PRODUCT_DIR_MAP[dodate_dir]
+      path = os.path.join(source, prod_dir)
+      # There is no square-root %-progress product, so skip this combination
+      if source == 'ForWarn2_Sqrt' and dodate_dir == 'pctprogress':
+        continue
+      if not os.path.exists(path):
+        log.error("Missing product directory {}".format(path))
         continue
       files = os.listdir(path)
       files = list(filter(lambda f: datestring in f, files))
       if not len(files):
-        return False
-  return True
+        log.debug("Unable to find file in archive for {} {} {}".format(source, dodate_dir, datestring))
+        all_products_exist = False
+
+  if not all_products_exist:
+    log.warn("Missing ForWarn 2 products in the archive for {}/{}".format(year, jd))
+
+  return all_products_exist
+
+
+def get_all_modis_data_years():
+  '''Return a list of years (strings) for which MODIS data is available on the GIMMS server.'''
+  start = int(MODIS_DATA_YEAR_START)
+  today = datetime.datetime.today()
+  this_year = today.strftime('%Y')
+  all_years = list(range(start, int(this_year)+1 ))
+  return [ str(y) for y in all_years ]
+
 
 

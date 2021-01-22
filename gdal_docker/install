@@ -16,4 +16,4 @@ apt-get install -y \
   python3-pip \
   wget
 
-pip3 install rasterio
+pip3 install -r requirements.txt

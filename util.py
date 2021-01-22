@@ -1,18 +1,32 @@
 
 from subprocess import Popen, PIPE, STDOUT
 import os, os.path, sys, re, traceback, shutil, datetime
+from pytz import timezone
+
 import logging as log
 
 from config import *
 
 
+def get_now_est(formatted=True, time_format='%Y-%m-%d %I:%M:%S%p'):
+  tz = 'US/Eastern'
+  now = datetime.datetime.now(timezone(tz)) 
+  if formatted:
+    return now.strftime(time_format)
+  else:
+    return now
+  
+
+# TODO
 def mail_results(success, date, dryrun, log_path):
+  if not os.path.exists(MAIL_TO_ADDRS_FILE):
+    log.error("Unable to email results since mail_to_addrs.txt is missing.")
   jd = date['jd']
   mail_to_addrs = []
   with open(MAIL_TO_ADDRS_FILE) as f:
     for addr in f:
       mail_to_addrs.append(addr.strip())
-  logging.info("Emailing results to: {0}".format(' '.join(mail_to_addrs)))
+  log.info("Emailing results to: {0}".format(' '.join(mail_to_addrs)))
   dryrun_body_text = "" if not dryrun else "NOTE: THIS IS A TEST OF THE FORWARN 2 SYSTEM!\n\n"
   if success:
     subject_text = "FW2 Day {0} Product Generation".format(day).rstrip()
@@ -69,6 +83,7 @@ def run_subprocess(command):
     return 1
 
 
+# TODO this function kind of sucks...
 def try_func(f, *args, **kwargs):
   '''Run a function in a try block, logging any resulting error
   and exiting the program is directed.
@@ -77,19 +92,16 @@ def try_func(f, *args, **kwargs):
   to the supplied function.
 
   There are two optional keyword arguments that affect this function:
-
-  quit_on_fail: Set to true to sys.exit(1) if an exception is raised.
-  log_error: Set to true report exception tracebacks to logging.error.
+    log_error: Log errors. Default is True.
+    quit_on_fail: Invoke sys.exit(1) if an exception is caught.
   '''
   try:
     result = f(*args, **kwargs)
     return result
   except:
-    if log_error:
+    if kwargs.get('log_error', True):
       log.error(traceback.print_exc())
-      if kwargs['fail_log']:
-        log.error(kwargs['fail_log'])
-    if kwargs['quit_on_fail']:
+    if kwargs.get('quit_on_fail', False):
       log.info("Exiting due to unrecoverable error...")
       sys.exit(1)
 
@@ -100,21 +112,6 @@ def init_log(level=log.DEBUG):
   ch = log.StreamHandler()
   logger = log.getLogger()
   logger.addHandler(ch)
-
-
-def check_is_only_instance_or_quit():
-  name_of_this_script = sys.argv[0].split('/').pop()
-  command = "ps -aux | grep %s" % name_of_this_script
-  stdout = check_output(command, shell=True)
-  lines = stdout.split('\n')
-  # Remove empty strings made from the split command
-  # Remove entries related to the grep command run as part of the process
-  lines = [ line for line in lines if line != '' and 'grep' not in line ]
-  if (len(lines) > 1):
-    # One entry refers to this instance of the script.
-    # More than one entry means there is another instance of the script running.
-    logging.info("Another instance of %s is already running. Exiting..." % name_of_this_script)
-    sys.exit() 
 
 
 
@@ -130,6 +127,7 @@ def get_year_jd_config_for_datetime(date):
 
 def validate_modis_yr_jd(year, jd):
   '''Throw an exception if a given year or julian day is invalid.'''
+  today_year = datetime.datetime.today().strftime('%Y')
   if int(year) < MODIS_DATA_YEAR_START or int(year) > int(today_year):
     raise ValueError('Bad year given. Must be a four-digit number in the range {}-{}.'.format(MODIS_DATA_YEAR_START, today_year))
   if str(jd) not in ALL_MODIS_JULIAN_DAYS:
@@ -168,20 +166,12 @@ def get_three_modis_dates_for_fw2_product(year, jd):
   return dates
 
 
-def get_all_modis_data_years():
-  '''Return a list of years (strings) for which MODIS data is available on the GIMMS server.'''
-  start = int(MODIS_DATA_YEAR_START)
-  today = datetime.datetime.today()
-  this_year = today.strftime('%Y')
-  all_years = list(range(start, int(this_year)+1 ))
-  return [ str(y) for y in all_years ]
-
 
 
 ############################## FILE HELPERS ########################################
 
 
-def harvest_products(date, dryrun):
+def harvest_products(date, dryrun=False):
   year = date['year']
   jd = date['jd']
   for key in PRODUCT_DIRS:
@@ -198,11 +188,11 @@ def harvest_products(date, dryrun):
       else:
         continue
       old_fullpath = os.path.join(path, f)
-      new_fullpath = os.path.join('.', source_dir, PRODUCT_DIRS[key], get_new_fw2_filename_for(f))
+      new_fullpath = os.path.join('.', source_dir, PRODUCT_DIRS[key], rename_dodate_filename(f))
       if os.path.isdir(os.path.join('.', source_dir, PRODUCT_DIRS[key])):
-        logging.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, date))
+        log.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, date))
         shutil.copyfile(old_fullpath, new_fullpath)
-      try_func(os.remove, old_fullpath, quit_on_fail=True)
+      try_func(os.remove, old_fullpath)
 
 
 def get_8day_max_filename(year, jd, product_type, ext='img'):
@@ -226,7 +216,7 @@ def get_precursor_path(jd, filename):
   return os.path.join(PRECURSORS_DIR, jd, filename)
 
 
-def symlink_precursors(dates):
+def make_symlinks_for_dates(dates):
   '''Make symbolic links in the current directory to any precursors that may be useful for creating ForWarn 2 products for the given dates.
 
   dates: a list of dicts, each with two keys, 'year' and 'jd'
@@ -238,16 +228,10 @@ def symlink_precursors(dates):
     jd_dir = os.path.join(PRECURSORS_DIR, jd)
     three_jds = [ d['jd'] for d in get_three_modis_dates_for_fw2_product(year, jd) ]
     jds.extend(three_jds)
-  jds = set(jds)
-  for jd in list(jds):
+  jds = sorted(set(jds))
+  for jd in jds:
     build_symlinks_by_pattern(PRECURSORS_DIR, '.', ".*\d{4}\."+jd+".*\.img") 
 
-
-def destroy_symlinks_by_ext(ext='.img'):
-  '''Delete any symlinks in the current directory that have a certain file extension (default is '.img')'''
-  for f in os.listdir('.'):
-    if os.path.islink(f) and f.endswith(ext) and not os.path.isdir(f):
-      os.remove(f) 
 
 
 def build_symlinks_by_pattern(source_dir, dest_dir, pattern, dryrun=False):
@@ -264,7 +248,6 @@ def build_symlinks_by_pattern(source_dir, dest_dir, pattern, dryrun=False):
               try:
                 if not dryrun:
                   os.symlink(src, dst)
-                log.info("Linking {}...".format(src))
               except:
                 pass
           else:
@@ -275,7 +258,7 @@ def build_symlinks_by_pattern(source_dir, dest_dir, pattern, dryrun=False):
 
 
 def archive_new_precursors(base_dir='.', ext='.img'):
-  '''Move any precursor files (hard links only) in the current directory to the archive.'''
+  '''Move any precursor files (hard links) in the current directory to the precursor archive.'''
   all_jds = ALL_MODIS_JULIAN_DAYS
   files = os.listdir(base_dir)
   for f in files:
@@ -283,7 +266,7 @@ def archive_new_precursors(base_dir='.', ext='.img'):
       for jd in all_jds:
         if re.search(".*\d{4}\."+jd+".*"+ext+"$", f):
           new_path = os.path.join(PRECURSORS_DIR, jd, f)
-          log.info("Moving {} to {}...".format(f, new_path))
+          log.info("Moving new precursor {} to the precursor archive...".format(f))
           shutil.move(f, new_path)
 
 

@@ -2,6 +2,6 @@
 
 source .env
 
-cd ./docker
+cd ./gdal_docker
 
 docker build -t $DKR_IMAGE_TAG .

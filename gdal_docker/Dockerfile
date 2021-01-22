@@ -8,6 +8,7 @@ EXPOSE 80
 
 WORKDIR /build
 
-ADD ./install.sh /build/install.sh
+ADD ./install /build/install
+ADD ./requirements.txt /build/requirements.txt
 
-RUN ./install.sh
+RUN ./install
