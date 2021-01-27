@@ -17,7 +17,7 @@ def delete_symlinks_by_ext(ext='.img'):
       os.remove(f) 
 
 
-def delete_nrt_8day_max_files_with_existing_std():
+def delete_nrt_8day_max_files_with_existing_std(dryrun=False):
   # TODO this is not working
   '''Removes all NRT 8-day max files if an STD file already exists for the same period.'''
   jds = ALL_MODIS_JULIAN_DAYS
@@ -31,7 +31,8 @@ def delete_nrt_8day_max_files_with_existing_std():
       if os.path.exists(std_path) and os.path.exists(nrt_path):
         found_at_least_one_nrt_to_remove = True
         log.info("Deleting {} (std version already exists)...".format(nrt_path))
-        try_func(os.remove, nrt_path)
+        if not dryrun:
+          try_func(os.remove, nrt_path)
 
 
 def check_is_only_instance_or_quit():
@@ -45,7 +46,7 @@ def check_is_only_instance_or_quit():
   if (len(lines) > 1):
     # One entry refers to this instance of the script.
     # More than one entry means there is another instance of the script running.
-    logging.info("Another instance of {} is already running! Or it's open in a text editor (LOL). Exiting...".format(name_of_this_script))
+    print("Another instance of {} is already running! Or it's open in a text editor (LOL). Exiting...".format(name_of_this_script))
     sys.exit() 
 
 
@@ -151,40 +152,33 @@ def fw2_products_exist(date_config):
   datestring = file_date.strftime('%Y%m%d')
   # Keys are directories used by the dodate bash script to place output files
   # Values are the corresponding directory names in the product archive.
-  PRODUCT_DIR_MAP={
-    '1-yr-max' : 'X_LC_1YEAR',
-    '10-yr-90' : 'X_LC_90_10_YR',
-    '3-yr-max' : 'X_LC_3YEAR',
-    '5-yr-90'  : 'X_LC_5YEAR',
-    'ALC'      : 'X_LC_ALC_1YR',
-    'median-all-yr-max' : 'X_LC_MEDIAN_ALL_YR',
-    'pctprogress' : 'X_LC_PCTPROGRESS'
-  }
-
-  SOURCE_DIRS=[ 'ForWarn2', 'ForWarn2_Sqrt' ]
-
+  tree = get_fw2_archive_tree()
   all_products_exist = True
-  
-  for source in SOURCE_DIRS:
-    for dodate_dir in PRODUCT_DIR_MAP:
-      prod_dir = PRODUCT_DIR_MAP[dodate_dir]
-      path = os.path.join(source, prod_dir)
-      # There is no square-root %-progress product, so skip this combination
-      if source == 'ForWarn2_Sqrt' and dodate_dir == 'pctprogress':
-        continue
-      if not os.path.exists(path):
-        log.error("Missing product directory {}".format(path))
-        continue
-      files = os.listdir(path)
+  for source in tree.keys():
+    source_dir = FW2_ARCHIVE_DIR_NORMAL if source == 'normal' else FW2_ARCHIVE_DIR_MUTED
+    for dodate_dir in tree[source].keys():
+      dir_path = tree[source][dodate_dir]
+      if not os.path.exists(dir_path):
+        log.error("Missing product directory {}!".format(dir_path))
+      files = os.listdir(dir_path)
       files = list(filter(lambda f: datestring in f, files))
       if not len(files):
-        log.debug("Unable to find file in archive for {} {} {}".format(source, dodate_dir, datestring))
+        log.debug("Unable to find file in archive for {} {} {}".format(source_dir, dodate_dir, datestring))
         all_products_exist = False
-
   if not all_products_exist:
-    log.warn("Missing ForWarn 2 products in the archive for {}/{}".format(year, jd))
-
+    log.warn("Missing ForWarn 2 products in the archive for {}/{}...".format(year, jd))
   return all_products_exist
+
+
+def remove_staging_files(dryrun=False):
+  '''Remove the files Aqua.img and Terra.img from the staging environment.'''
+  files = [ 'Aqua.img', 'Terra.img' ]
+  for f in files:
+    if os.path.exists(f):
+      log.info("Removing staging file {}".format(f))
+      try: os.remove(f)
+      except:
+        log.error("Unable to remove staging file {}".format(f))
 
 
 def get_all_modis_data_years():
@@ -194,6 +188,5 @@ def get_all_modis_data_years():
   this_year = today.strftime('%Y')
   all_years = list(range(start, int(this_year)+1 ))
   return [ str(y) for y in all_years ]
-
 
 

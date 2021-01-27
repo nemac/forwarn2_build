@@ -5,6 +5,8 @@ MAINTAINER NEMAC Dev Team <nemac@unca.edu>
 USER root
 
 EXPOSE 80
+EXPOSE 587
+EXPOSE 25
 
 WORKDIR /build
 

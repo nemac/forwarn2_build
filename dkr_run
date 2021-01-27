@@ -3,6 +3,7 @@
 source .env
 
 docker run --rm -it \
+  --network=host \
   -v $PWD:/build \
   -v $PWD/ForWarn2:/build/ForWarn2 \
   -v $PWD/ForWarn2_Sqrt:/build/ForWarn2_Sqrt \

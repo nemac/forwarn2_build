@@ -9,7 +9,7 @@ todo_product_days
 ALC/*
 median-all-yr-max/*
 pctprogress/*
-logs/*
+log/*
 
 # vim swap files
 *.swp
