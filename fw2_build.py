@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 import os, os.path, sys, re, datetime, shutil, traceback, argparse
 
@@ -10,6 +11,7 @@ from util import \
   ALL_MODIS_JULIAN_DAYS, \
   load_env, \
   mail_results, \
+  harvest_products, \
   init_log, \
   try_func, \
   run_subprocess, \
@@ -25,8 +27,8 @@ from state import \
   get_todo_dates_fw2_products, \
   delete_nrt_8day_max_files_with_existing_std, \
   delete_symlinks_by_ext, \
-  check_is_only_instance_or_quit
-
+  check_is_only_instance_or_quit, \
+  fw2_products_exist
 
 def get_cli_args():
   '''Initialize the command-line argument-parser.'''
@@ -127,11 +129,11 @@ def build_fw2_products_for(date, harvest=False, log_path=None, dryrun=False):
   # Only move result files for cron runs
   if harvest:
     harvest_products(date, dryrun=dryrun)
-    if fw2_products_exist(date):
+    if fw2_products_exist(date, dryrun=dryrun):
       success = True
     else:
       success = False
-      logging.error('Something went wrong while trying to move the product files to their destination.')
+      log.error('Something went wrong while trying to move the product files to their destination.')
   date['success'] = success
   return date
 
@@ -147,7 +149,9 @@ def build_all_8day_max_files_for_product_type(product_type, dryrun=False):
       if int(exitcode) == 0:
         at_least_one_success = True
         new_products.append(d)
-  return sorted(new_products)
+  new_sorted = sorted(new_products, key=lambda d: d['jd'])
+  log.info(new_sorted)
+  return new_sorted
 
 
 def build_8day_max_for(product_type, year, jd, verbose=False, dryrun=False):

@@ -1,16 +1,24 @@
 FROM ubuntu:18.04
 
+ARG DKR_BUILD_DIR
+ARG DKR_USER
+ARG DKR_GROUP
+
 MAINTAINER NEMAC Dev Team <nemac@unca.edu>
 
-USER root
+#RUN useradd $DKR_USER
+#RUN mkdir $DKR_BUILD_DIR
+#RUN chown $DKR_USER:$DKR_GROUP $DKR_BUILD_DIR
 
-EXPOSE 80
+# SMTP
 EXPOSE 587
 EXPOSE 25
+# HTTP
+EXPOSE 80
 
-WORKDIR /build
+WORKDIR $DKR_BUILD_DIR
 
-ADD ./install /build/install
-ADD ./requirements.txt /build/requirements.txt
+ADD ./install $DKR_BUILD_DIR/install
+ADD ./requirements.txt $DKR_BUILD_DIR/requirements.txt
 
 RUN ./install

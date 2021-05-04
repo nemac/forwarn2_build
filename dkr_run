@@ -1,12 +1,23 @@
 #!/bin/bash
 
-source .env
+# Get the directory of this script
+DIR=`realpath $(dirname $0)`
 
-docker run --rm -it \
+source $DIR/.env
+
+# Do not start if a process is already running
+if [ "$( $DOCKER container inspect -f '{{.State.Running}}' $DKR_CONTAINER_NAME 2>/dev/null)" == "true" ]; then
+  echo "Another ForWarn2 docker process is already running!"
+  echo "Exiting..."
+  exit
+fi
+
+$DOCKER run --rm --tty \
   --network=host \
-  -v $PWD:/build \
-  -v $PWD/ForWarn2:/build/ForWarn2 \
-  -v $PWD/ForWarn2_Sqrt:/build/ForWarn2_Sqrt \
-  -v $PWD/precursors:/build/precursors \
-  -v $PWD/graph_data:/build/graph_data \
+  --name $DKR_CONTAINER_NAME \
+  -v $DIR/:$DKR_BUILD_DIR \
+  -v $DIR/$FW2_ARCHIVE_DIR_NORMAL:$DKR_BUILD_DIR/$FW2_ARCHIVE_DIR_NORMAL \
+  -v $DIR/$FW2_ARCHIVE_DIR_MUTED:$DKR_BUILD_DIR/$FW2_ARCHIVE_DIR_MUTED \
+  -v $DIR/$PRECURSORS_DIR:$DKR_BUILD_DIR/$PRECURSORS_DIR \
+  -v $DIR/$ALL_YEAR_MAXES_DIR:$DKR_BUILD_DIR/$ALL_YEAR_MAXES_DIR \
   $DKR_IMAGE_TAG $1

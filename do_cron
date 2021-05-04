@@ -1,3 +1,7 @@
 #!/bin/bash
 
-./dkr_run "python3 ./fw2_build.py --cron --email"
+# Get the directory of this script (more reliable than $PWD)
+DIR=`realpath $(dirname $0)`
+cd $DIR
+
+./dkr_run "./fw2_build.py --cron --email" 2>&1

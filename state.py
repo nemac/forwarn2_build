@@ -139,7 +139,7 @@ def filter_unavailable_modis_dates(dates):
   return list(filter(lambda d: d <= today - datetime.timedelta(days=day_delta), dates))
 
 
-def fw2_products_exist(date_config):
+def fw2_products_exist(date_config, dryrun=False):
   '''Return True if a full set of products exist for the given date.
 
   Arguments:
@@ -167,6 +167,8 @@ def fw2_products_exist(date_config):
         all_products_exist = False
   if not all_products_exist:
     log.warn("Missing ForWarn 2 products in the archive for {}/{}...".format(year, jd))
+  if dryrun:
+    return True
   return all_products_exist
 
 

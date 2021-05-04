@@ -8,16 +8,17 @@
 ##################################################################
 ##################################################################
 #
-# Maintained By: NEMAC Development Team (nemac@unca.edu)
+# Low-level bash script for building an entire set of products
+# for a single 24-day period (3 MODIS periods).
+# This is where the sausage is made.
+#
+# Maintained By: UNCA's NEMAC (nemac@unca.edu)
 #
 # Arguments: 
 #   datestring - a string of the form YYYYJJJ, where
 #     YYYY is a year and JJJ is a zero-padded julian day (day of the year).
 #
 # Example: ./dodate 2019009
-# 
-# Summary: Builds a set of MODIS-based ForWarn 2 products.
-#   See all_product_days in this folder for all possible combinations of JJJ.
 #
 # Data Source: https://gimms.gsfc.nasa.gov/MODIS/
 #
