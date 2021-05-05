@@ -1,0 +1,3 @@
+[submodule "raster-helpers"]
+	path = raster-helpers
+	url = git@github.com:nemac/raster-helpers
