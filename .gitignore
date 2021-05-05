@@ -8,6 +8,7 @@ median-all-yr-max/*
 pctprogress/*
 log/*
 *.gz
+*.vrt
 
 # vim swap files
 *.swp

@@ -67,14 +67,15 @@ def main():
     level = log.DEBUG
   init_log(level=level, log_path=log_path, dryrun=args.dryrun)
   if args.cron:
-    all_tasks(dryrun=args.dryrun, email=args.email, harvest=True)
+    all_tasks(log_path, dryrun=args.dryrun, email=args.email, harvest=True)
   elif args.datestring:
     year = datestring[:4]
     jd = datestring[-3:]
-    try_func(validate_modis_yr_jd, year, jd, quit_on_fail=True)
+    # TODO
+    #try_func(validate_modis_yr_jd, year, jd, quit_on_fail=True)
 
 
-def all_tasks(dryrun=False, email=False, harvest=False):
+def all_tasks(log_path, dryrun=False, email=False, harvest=False):
   '''The main task cycle for ForWarn 2. Builds any missing precursors, updates the graph data files, and builds any missing ForWarn 2 products.'''
   log.info('Starting ForWarn 2 production cycle...')
 
@@ -111,9 +112,10 @@ def all_tasks(dryrun=False, email=False, harvest=False):
     archive_new_precursors(dryrun=dryrun)
   if not len(fw2_todo_dates):
     log.info("Already up to date!")
-  log.info('Finished production cycle.')
-  #if email and len(fw2_todo_dates):
-  mail_results(dates=[{ 'year': '2021', 'jd': '017', 'success': True }], dryrun=dryrun)
+    os.remove(log_path)
+  else:
+    log.info('Finished production cycle.')
+    mail_results(dates=fw2_todo_dates, dryrun=dryrun)
 
 
 def build_fw2_products_for(date, harvest=False, log_path=None, dryrun=False):
@@ -290,7 +292,7 @@ def check_same_proj(paths):
 
 
 def get_largest_extent_of_datasets(paths, dryrun=False):
-  '''Get the maximum value for each extent parameter for a list of rasters.'''
+  '''Returns the maximum value for each extent parameter for a list of rasters.'''
   if dryrun:
     return []
   check_same_proj(paths)
@@ -306,10 +308,10 @@ def get_largest_extent_of_datasets(paths, dryrun=False):
 
 
 def build_8day_vrt(path, bounds=None, vrtnodata=255, band_num=1, dryrun=False):
-  '''Wrapper for gdalbuildvrt. Build a 1-band VRT..
+  '''Wrapper for gdalbuildvrt. Build a 1-band VRT.
 
   Arguments:
-    src: path to the source file
+    path: path to the source file
     bounds: a python list of the form [ xmin, ymin, xmax, ymax ].
       These values are joined into a string that is passed to the -te flag.
     vrtnodata: Value to use for the -vrtnodata flag.
