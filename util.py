@@ -378,14 +378,50 @@ def build_symlinks_by_pattern(source_dir, dest_dir, pattern, dryrun=False):
     log.warn("No files found to make symbolic links for!")
 
 
-def archive_new_precursors(base_dir='.', ext='.img', dryrun=False):
-  '''Move any precursor files (hard links) in the current directory to the precursor archive.'''
+def delete_staging_precursors(base_dir='.', ext='img', dryrun=False):
+  '''Remove staging precursor files with file extension {ext} in {base_dir}.
+
+  This function removes any file ending in {img} in the folder {base_dir} that
+  is NOT a maxMODIS or maxMODISmax precursor.'''
+  staging_precursors = [
+    '10thallpriormax',
+    '90thallpriormax',
+    'maxMODISalc',
+    'maxMODISmax90.10-yr-baseline',
+    'maxMODISmax90.5-yr-baseline',
+    'maxMODIS.1-yr-baseline',
+    'maxMODISmaxmax.1-yr-baseline',
+    'maxMODISmaxmax.3-yr-baseline',
+    'maxMODISmaxmax.5-yr-baseline',
+    'medianallpriormax'
+  ]
+  all_jds = ALL_MODIS_JULIAN_DAYS
+  files = os.listdir(base_dir)
+  for f in files:
+    if f.endswith(ext) and not os.path.islink(f):
+      # only move maxMODIS and maxMODISmax precursors
+      for s in staging_precursors:
+        if s in f:
+          log.info("Removing staging precursor {}".format(f))
+          if not dryrun:
+            p = os.path.realpath(os.path.join(base_dir, f))
+            os.remove(p)
+  if 'Aqua.img' in files and not dryrun:
+    os.remove(os.path.join(base_dir, 'Aqua.img'))
+  if 'Terra.img' in files and not dryrun:
+    os.remove(os.path.join(base_dir, 'Terra.img'))
+
+
+def archive_new_precursors(base_dir='.', ext='img', dryrun=False):
+  '''Move any precursor files (hard links) in the current directory to the precursor archive.
+  maxMODIS and maxMODIS max precursors are moved to the archive.'''
   all_jds = ALL_MODIS_JULIAN_DAYS
   files = os.listdir(base_dir)
   for f in files:
     if f.endswith(ext) and not os.path.islink(f):
       for jd in all_jds:
-        if re.search(".*\d{4}\."+jd+".*"+ext+"$", f):
+        # only move maxMODIS and maxMODISmax precursors
+        if re.search('^maxMODIS(max|)\.\d{4}\.'+jd+'\.(std|nrt)\.'+ext+'$', f):
           new_path = os.path.join(PRECURSORS_DIR, jd, f)
           log.info("Moving new precursor {} to the precursor archive...".format(f))
           if not dryrun:
