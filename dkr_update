@@ -6,4 +6,4 @@ sys.path.append('/build')
 from bulk_maxes import YearMaxesArchive
 
 archive = YearMaxesArchive()
-archive.update()
+archive.update(update_precursors=True)

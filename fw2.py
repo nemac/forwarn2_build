@@ -3,15 +3,9 @@
 from util import *
 from state import *
 
-volumes = {
-  os.path.realpath(precursor_dir): {
-    'bind': os.path.join(dkr_build_dir, precursor_dir),
-    'mode': 'rw'
-  },
-  os.path.realpath(graph_data_dir): {
-    'bind': os.path.join(dkr_build_dir, graph_data_dir),
-    'mode': 'rw'
-  },
+
+
+fw2_products_vols = {
   os.path.realpath('./ForWarn2'): {
     'bind': os.path.join(dkr_build_dir, 'ForWarn2'),
     'mode': 'rw'
@@ -21,6 +15,9 @@ volumes = {
     'mode': 'rw'
   }
 }
+
+
+
 
 def get_cli_args():
   '''Initialize the command-line argument-parser.'''
@@ -36,6 +33,7 @@ def get_cli_args():
   parser.add_argument('--overwrite', action='store_true', help='TODO Overwrite existing products. Use at your own risk!')
   parser.add_argument('--log', action='store_true', help='TODO Keep a log. Use --log-path to override the default log path, which places the log in ./log.')
   parser.add_argument('--log-path', help='TODO Path to override the default log file (implies --log).')
+  parser.add_argument('--no-docker', help='TODO')
   parser.add_argument('--log-level', help='Set the Python logging level.', \
     choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'], \
     metavar='(CRITICAL|ERROR|WARNING|INFO|DEBUG)' \
@@ -45,10 +43,13 @@ def get_cli_args():
 
 
 def main():
+
+  # Setup
   check_is_only_instance_or_quit()
   load_env(ns=globals())
   args = get_cli_args()
-  now = get_now_est(time_format='%Y%m%d_%I:%M:%S')
+
+  # Logging
   if args.log or args.cron:
     log_path = get_default_log_path()
   if args.log_path:
@@ -58,6 +59,8 @@ def main():
   else:
     level = log.DEBUG
   init_log(level=level, log_path=log_path, dryrun=args.dryrun)
+
+  # Cron run
   if args.cron:
     all_tasks(log_path, dryrun=args.dryrun, email=args.email, harvest=True)
   elif args.datestring:

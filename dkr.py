@@ -52,6 +52,7 @@ def run_gdal(cmd, name=name, volumes=None):
   except Exception as e:
     print(e) 
 
+
 vols = {
   os.path.realpath('.'): {
     'bind': os.path.realpath(dkr_build_dir),
@@ -68,4 +69,3 @@ vols = {
 }
 
 run_gdal('/build/dkr_update', volumes=vols)
-#build_gdal()
