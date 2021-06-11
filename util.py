@@ -39,6 +39,49 @@ def load_env(ns=globals()):
 load_env()
 
 
+## Helpers
+#
+
+def run_process(cmd, remove_newlines=True):
+  print('Running subprocess...')
+  print(f'{cmd}')
+  if remove_newlines:
+    cmd = cmd.replace('\n', '')
+  cmd = cmd.strip()
+  process = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
+  with process.stdout:
+    for line in iter(process.stdout.readline, b''):
+      print(line.rstrip().decode("utf-8"))
+  exitcode = process.wait()
+  if exitcode > 0:
+    raise OSError(f"Process returned with non-zero exit code: {exitcode}.")
+
+
+## Exceptions
+#
+
+class DataNotFoundError(Exception):
+  pass
+
+class InvalidDateError(Exception):
+  pass
+
+class OverwriteError(Exception):
+  pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ########################## LOG HELPERS ####################################
 
@@ -154,28 +197,6 @@ def mail_results(dates=[], dryrun=False):
 
 ########################## CONTROL HELPERS ####################################
 
-
-def run_subprocess(command, dryrun=False):
-  '''Runs a subprocess and logs stdout and stderr to log.debug.'''
-  try:
-    log.debug('Starting subprocess: {}'.format(' '.join(command)))
-    if not dryrun:
-      process = Popen(command, stdout=PIPE, stderr=STDOUT)
-      with process.stdout:
-        for line in iter(process.stdout.readline, b''):
-          log.debug('    {}'.format(line.rstrip().decode("utf-8")))
-      exitcode = process.wait()
-    else:
-      exitcode = 0  
-    if int(exitcode) == 0:
-      log.debug('Subprocess completed successfully.')
-    else:
-      log.warn('Subprocess exited with non-zero status code {}'.format(str(exitcode)))
-    return exitcode
-  except Exception as e:
-    log.error(traceback.print_exc())
-    log.error(e)
-    return 1
 
 
 # TODO this function kind of sucks...
@@ -313,7 +334,8 @@ def harvest_products(date, dryrun=False):
         log.info("Moving {0}\n to \n{1}\n".format(old_fullpath, new_fullpath, date))
         if not dryrun:
           shutil.copyfile(old_fullpath, new_fullpath)
-          try_func(os.remove, old_fullpath)
+          # TODO try block?
+          os.remove(old_fullpath)
 
 
 def get_8day_max_filename(year, jd, product_type, ext='img'):
@@ -410,22 +432,6 @@ def delete_staging_precursors(base_dir='.', ext='img', dryrun=False):
     os.remove(os.path.join(base_dir, 'Aqua.img'))
   if 'Terra.img' in files and not dryrun:
     os.remove(os.path.join(base_dir, 'Terra.img'))
-
-
-def archive_new_precursors(base_dir='.', ext='img', dryrun=False):
-  '''Move any precursor files (hard links) in the current directory to the precursor archive.
-  maxMODIS and maxMODIS max precursors are moved to the archive.'''
-  all_jds = ALL_MODIS_JULIAN_DAYS
-  files = os.listdir(base_dir)
-  for f in files:
-    if f.endswith(ext) and not os.path.islink(f):
-      for jd in all_jds:
-        # only move maxMODIS and maxMODISmax precursors
-        if re.search('^maxMODIS(max|)\.\d{4}\.'+jd+'\.(std|nrt)\.'+ext+'$', f):
-          new_path = os.path.join(PRECURSORS_DIR, jd, f)
-          log.info("Moving new precursor {} to the precursor archive...".format(f))
-          if not dryrun:
-            shutil.move(f, new_path)
 
 
 def rename_dodate_filename(filename):

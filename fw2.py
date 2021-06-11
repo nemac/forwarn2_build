@@ -1,34 +1,26 @@
-#!/usr/bin/env python3
 
-import os, os.path, sys, re, datetime, shutil, traceback, argparse
 
-import xml.etree.ElementTree as ET
-import rasterio as rio
-import logging as log
-from subprocess import check_output
+from util import *
+from state import *
 
-from util import \
-  ALL_MODIS_JULIAN_DAYS, \
-  load_env, \
-  mail_results, \
-  harvest_products, \
-  init_log, \
-  try_func, \
-  run_subprocess, \
-  archive_new_precursors, \
-  make_symlinks_for_dates, \
-  get_now_est, \
-  get_default_log_path
-
-from state import \
-  get_todo_dates_8day_max, \
-  get_todo_years_missing_all_year_maxes_precursor, \
-  get_three_modis_dates_for_fw2_product, \
-  get_todo_dates_fw2_products, \
-  delete_nrt_8day_max_files_with_existing_std, \
-  delete_symlinks_by_ext, \
-  check_is_only_instance_or_quit, \
-  fw2_products_exist
+volumes = {
+  os.path.realpath(precursor_dir): {
+    'bind': os.path.join(dkr_build_dir, precursor_dir),
+    'mode': 'rw'
+  },
+  os.path.realpath(graph_data_dir): {
+    'bind': os.path.join(dkr_build_dir, graph_data_dir),
+    'mode': 'rw'
+  },
+  os.path.realpath('./ForWarn2'): {
+    'bind': os.path.join(dkr_build_dir, 'ForWarn2'),
+    'mode': 'rw'
+  },
+  os.path.realpath('./ForWarn2_Sqrt'): {
+    'bind': os.path.join(dkr_build_dir, 'ForWarn2_Sqrt'),
+    'mode': 'rw'
+  }
+}
 
 def get_cli_args():
   '''Initialize the command-line argument-parser.'''
@@ -75,20 +67,44 @@ def main():
     #try_func(validate_modis_yr_jd, year, jd, quit_on_fail=True)
 
 
+class ForWarn2Archive:
 
-########################### HELPERS ###################################
+  def __init__(self):
+    # ForWarn 2 products
+    log.info("Building new ForWarn 2 products...")
+    fw2_todo_dates = get_todo_dates_fw2_products()
+    make_symlinks_for_dates(fw2_todo_dates, dryrun=dryrun)
+    total_success = True
+    for d in fw2_todo_dates:
+      # Add a boolean called 'success' to each dict
+      build_fw2_products_for(d, harvest=harvest, dryrun=dryrun)
+    if not len(fw2_todo_dates):
+      log.info("Already up to date!")
+      os.remove(log_path)
+    else:
+      log.info('Finished production cycle.')
+      mail_results(dates=fw2_todo_dates, dryrun=dryrun)
 
 
+  def build_fw2_products_for(date, harvest=False, log_path=None, dryrun=False):
+    # TODO flesh out this docstring
+    '''Build a full set of ForWarn 2 products for some date.
+    '''
+    year = date['year']
+    jd = date['jd']
+    log.info("Building ForWarn 2 products for {}/{}...\n".format(year, jd))
+    c = [ DODATE_PATH, '{}{}'.format(year, jd) ]
+    run_subprocess(c, dryrun=dryrun)
+    success = False
+    # Only move result files for cron runs
+    if harvest:
+      harvest_products(date, dryrun=dryrun)
+      if fw2_products_exist(date, dryrun=dryrun):
+        success = True
+      else:
+        success = False
+        log.error('Something went wrong while trying to move the product files to their destination.')
+    date['success'] = success
+    return date
 
-
-if __name__ == '__main__':
-  try:
-    main()
-  except Exception as e:
-    log.error(e.__str__())
-    tb_lines = [ line.strip() for line in traceback.format_tb(e.__traceback__) ]
-    for line in tb_lines:
-      log.error(line)
-  finally:
-    delete_symlinks_by_ext()
 

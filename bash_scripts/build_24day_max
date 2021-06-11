@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DOY3=$1
+YR3=$2
+
+DOY2=$3
+YR2=$4
+
+DOY1=$5
+YR1=$6
+
+gdal_calc.py --debug --calc="\
+maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
++((A==254)|(B==254)|(C==254))*254\
++((A==255)&(B==255)&(C==255))*255\
+" --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" \
+  --outfile=maxMODISmax.$YR3.$DOY3.std.img \
+  -A maxMODIS.$YR1.$DOY1.std.img \
+  -B maxMODIS.$YR2.$DOY2.std.img \
+  -C maxMODIS.$YR3.$DOY3.std.img \
+  --type=Byte --overwrite
+

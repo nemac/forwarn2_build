@@ -1,0 +1,168 @@
+#!/bin/bash
+
+#
+# Build a maximum raster from the Aqua and Terra NDVI for an 8-day MODIS cycle.
+#
+
+################################### SETUP #############################################
+
+
+all_days=(001 009 017 025 033 041 049 057 065 073 081 089 097 105 113 121 129 137 145 153 161 169 177 185 193 201 209 217 225 233 241 249 257 265 273 281 289 297 305 313 321 329 337 345 353 361)
+
+#Exit immediately if any command, pipeline, etc exits with a non-zero status code.
+set -e
+
+function usage {
+        echo "Usage: $(basename $0) [-v] -t TYPE -y YEAR -d DOY"
+        echo '   -t             MODIS product type (either std or nrt).'
+        echo '   -y             The year of the product to fetch.'
+        echo '   -d             Zero-padded day of year (julian day) for the product to fetch.'
+        echo '   -v             Increase verbosity.'
+        exit 1
+}
+
+
+# not used
+function print_out {
+   local MESSAGE="${@}"
+   if [[ -n $VERBOSE_FLAG ]];then
+      echo "${MESSAGE}"
+   fi }
+
+
+optstring="hvTy:d:t:"
+while getopts ${optstring} arg; do
+  case ${arg} in
+    h)
+      usage
+      ;;
+    v)
+      VERBOSE_FLAG='-v'
+      ;;
+    T)
+      TEST=true
+    y)
+      YEAR=$OPTARG
+      ;;
+    d)
+      DOY=$OPTARG
+      ;;
+    t)
+      PRODUCT_TYPE=$OPTARG
+      ;;
+    :)
+      echo "$0: Must supply an argument to -$OPTARG." >&2
+      exit 1
+      ;;
+    ?)
+      echo "Invalid option: -${OPTARG}."
+      echo
+      usage
+      ;;
+  esac
+done
+
+
+if [[ -z $PRODUCT_TYPE ]]; then
+  echo "ERROR: use the -t flag to supply a product type."
+  exit 1
+fi
+if [[ "$PRODUCT_TYPE" != "std" && "$PRODUCT_TYPE" != "nrt" ]]; then
+  echo "ERROR: the product type must be std either 'std' or 'nrt'."
+  exit 1
+fi
+
+if [[ -z $YEAR ]]; then
+  echo "ERROR: use the -y flag to supply a year."
+  exit 1
+fi
+if [[ ${#YEAR} != 4 ]]; then
+  echo "ERROR: the year argument must be four characters long."
+  exit 1
+fi
+
+this_year=$(date +%Y)
+if [[ $YEAR < 2003 || $YEAR > $this_year ]]; then
+  echo "ERROR: the year argument must be in the range 2003-$this_year"
+  exit 1
+fi
+
+for check_day in "${all_days[@]}"; do
+  if [ "$check_day" -eq "$DOY" ]; then
+      day_is_valid='true'
+  fi
+done
+if [[ "$day_is_valid" != 'true' ]]; then
+  echo -n "ERROR: the day of year argument $DOY is invalid. Must be one of these: "
+  for check_day in "${all_days[@]}"; do
+    echo -n "$check_day "
+  done
+  echo
+  exit 1
+fi
+
+
+#################################################################
+
+echo "Building NDVI maximum raster for $YEAR/$DOY/$PRODUCT_TYPE"
+
+OUTFILE=maxMODIS.$YEAR.$DOY.$PRODUCT_TYPE.img
+
+# remove existing Terra and Aqua tile tifs
+rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+
+# Download tiles Aqua and Terra
+
+# Download 26 Terra tiles for conus
+# Note: A 404 causes the sript to exit with exit code 8
+
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+# download 26 Aqua tiles for conus
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
+wget -e robots=off -nd -q -np https://gimms.gsfc.nasa.gov/MODIS/$PRODUCT_TYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
+
+# did we get 26 tiles for each satellite?
+let numtiles=`ls -1 *.gz | wc -l`
+
+if [ "$numtiles" != 52 ]; then
+  echo "ERROR: Tiles MISSING for " $YEAR $DOY " only got " $numtiles
+  rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+  rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+  exit 52
+fi
+
+gunzip *.gz
+
+echo "Mosaicking together Terra tiles..."
+rm -f Terra.img
+gdal_merge.py $VERBOSE_FLAG -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$YEAR$DOY*.tif
+
+echo "Mosaicking together Aqua tiles..."
+rm -f Aqua.img
+gdal_merge.py $VERBOSE_FLAG -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$YEAR$DOY.*.tif
+
+rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+
+################################################################# # take the maximum NDVI from the Terra and Aqua 8-day composites
+
+# if both are 253 or if both are 255 or if either are 253 with the other 255, then 255, but this is NOT nodata
+# if either are 254, then 254, water
+# 252 is nodata coming out
+
+echo "Creating maximum NDVI product from the Terra and Aqua 8-day composites..."
+gdal_calc.py -A Terra.img -B Aqua.img --outfile=$OUTFILE --calc="\
+maximum((A<251)*A,(B<251)*B)\
++(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
++((A==254)|(B==254))*254\
+" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
+
+rm -f Aqua.img Terra.img
+

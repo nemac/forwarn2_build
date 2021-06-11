@@ -1,47 +1,150 @@
-
 import os, sys, copy
 import requests
+import rasterio as rio
+import xml.etree.ElementTree as ET
 
 from util import *
 from state import *
 
+from gimms import Gimms
+
 load_env()
-
-ALL_MODIS_JULIAN_DAYS=("001", "009", "017", "025", "033", "041", "049", "057", "065", "073", "081", "089", "097", "105", "113", "121", "129", "137", "145", "153", "161", "169", "177", "185", "193", "201", "209", "217", "225", "233", "241", "249", "257", "265", "273", "281", "289", "297", "305", "313", "321", "329", "337", "345", "353", "361")
-
-# ForWarn 2 julian days are the same as MODIS, except we exclude day 361
-# However, we still build precursors for day 361 since it's used when calculating
-# products for days 001 and 009.
-ALL_FW2_JULIAN_DAYS=ALL_MODIS_JULIAN_DAYS[:-1]
-
-# Each tuple is a triplet of MODIS product days corresponding to
-# a ForWarn 2 product window for the first day in the tuple.
-INTERVALS=[ ("361","353","345"), ("353","345","337"), ("345","337","329"), ("337","329","321"), ("329","321","313"), ("321","313","305"), ("313","305","297"), ("305","297","289"), ("297","289","281"), ("289","281","273"), ("281","273","265"), ("273","265","257"), ("265","257","249"), ("257","249","241"), ("249","241","233"), ("241","233","225"), ("233","225","217"), ("225","217","209"), ("217","209","201"), ("209","201","193"), ("201","193","185"), ("193","185","177"), ("185","177","169"), ("177","169","161"), ("169","161","153"), ("161","153","145"), ("153","145","137"), ("145","137","129"), ("137","129","121"), ("129","121","113"), ("121","113","105"), ("113","105","097"), ("105","097","089"), ("097","089","081"), ("089","081","073"), ("081","073","065"), ("073","065","057"), ("065","057","049"), ("057","049","041"), ("049","041","033"), ("041","033","025"), ("033","025","017"), ("025","017","009"), ("017","009","001"), ("009","001","361"), ("001","361","353") ]
-
-
-from gimms import Gimms, DataNotFoundError
-
 
 class PrecursorArchive:
 
-  def __init__(self, root_dir='./precursors', default_file_ext='img', api=None):
+  def __init__(self, root_dir='./precursors', year_maxes_root='./graph_data', default_file_ext='img', api=None):
     self.api = api or Gimms()
     self._jds = ALL_MODIS_JULIAN_DAYS
     self._intervals = INTERVALS
     self._default_file_ext = default_file_ext
     self._default_max_prefix = 'maxMODIS'
     self._default_maxmax_prefix = 'maxMODISmax'
-    self._root_dir = root_dir
+    self._root_dir = os.path.realpath(root_dir)
+    self._year_maxes_root = os.path.realpath(year_maxes_root)
     self._init_state()
     self._update_state()
 
   def update(self):
-    self._update_all()
+    all_updated = list(self._update_all())
+    std_updated = [ d for d in all_updated if d[-1] == 'std' ]
+    years_updated = sorted(set([ d[0] for d in std_updated ]))
+    return years_updated
+
+  def _get_8day_max_paths_for_yr(self, year):
+    paths = []
+    for jd in self._jds:
+      try:
+        path, nrt = self._get_best_8day_max_path(year, jd)
+        if not nrt:
+          paths.append({ 'jd': jd, 'path': path })
+      except:
+        pass
+    last_jd = paths[-1]['jd']
+    last_jd_i = self._jds.index(last_jd)
+    assert self._jds[last_jd_i] == last_jd
+    paths = [ d['path'] for d in paths ]
+    not_found = False
+    for jd in self._jds:
+      try:
+        p = self._get_file_path(year, jd, check=True)
+        if not_found:
+          raise DataNotFoundError('Missing std file for {year}!')
+      except FileNotFoundError as e:
+        not_found = True
+        continue
+    return paths
+
+  def _check_same_proj(self, paths):
+    proj_strings = []
+    for p in paths:
+      with rio.Env():
+        with rio.open(p) as src:
+          proj_strings.append(src.profile['crs'].to_proj4())
+    proj_last = proj_strings[0]
+    for proj in proj_strings:
+      if proj_last != proj:
+        raise TypeError('All datasets must have the exact same projection!')
+
+  def _get_largest_extent(self, paths):
+    self._check_same_proj(paths)
+    def max_by_key(iterable, key):
+      return max([ getattr(obj, key) for obj in iterable ])
+    bounds = []
+    for p in paths:
+      with rio.Env():
+        with rio.open(p) as src:
+          bounds.append(src.bounds)
+    max_bounds = [ max_by_key(bounds, key) for key in ('left', 'bottom', 'right', 'top') ]
+    return max_bounds
+
+  def _build_year_vrt(self, year, tmp_dir='./tmp'):
+    paths = self._get_8day_max_paths_for_yr(year)
+    bounds = self._get_largest_extent(paths)
+    img_filename = self._filename_template(year, None, year_only=True)
+    tmp_vrt_filename = f'{img_filename}.vrt'
+    year_vrt_path = os.path.join(tmp_dir, tmp_vrt_filename)
+    for i in range(0, len(paths)):
+      band_num = str(i+1)
+      path = paths[i]
+      temp_vrt = self._build_8day_max_vrt(path, bounds=bounds)
+      if band_num == '1':
+        main_tree = ET.parse(temp_vrt)
+        main_root = main_tree.getroot()
+      else:
+        tree = ET.parse(temp_vrt)
+        root = tree.getroot()
+        bandElement = root.find('VRTRasterBand')
+        bandElement.attrib['band'] = band_num
+        source_element = bandElement.find('ComplexSource')
+        filename_element = source_element.find('SourceFilename')
+        filename_element.text = path
+        filename_element.attrib['relativeToVRT'] = "0"
+        main_root.append(bandElement)
+      try: os.remove(temp_vrt)
+      except: pass
+    main_tree.write(year_vrt_path)
+    return year_vrt_path
+
+  def _build_8day_max_vrt(self, path, tmp_dir='./tmp', bounds=None, vrtnodata=255, band_num=1):
+    print(path)
+    cmd = f'''
+      gdalbuildvrt
+        -vrtnodata "{str(vrtnodata)}"
+        -b {str(band_num)}'''
+    tmp_vrt_path = f'{path}.vrt'
+    if bounds:
+      bounds_string = ' '.join([ str(num) for num in bounds ])
+      cmd += f'''
+        -te { bounds_string }'''
+    cmd += f'''
+        {tmp_vrt_path}
+        {path}
+    '''
+    run_process(cmd)
+    return tmp_vrt_path
+
+  def _get_width_height(self, path):
+    with rio.open(path) as f:
+      width = f.profile['width']
+      height = f.profile['height']
+    return width, height
+
+  def _get_crs(self, path):
+    with rio.open(path) as f:
+      crs = f.crs
+    return crs
+
+  def _get_profile(self, path):
+    with rio.open(path) as f:
+      profile = f.profile
+    return profile
 
   def _update_all(self):
     self._update_state()
     for d, y, jd in self._walk_state():
-      self._update_date(y, jd)
+      out_path, ptype, updated = self._update_date(y, jd)
+      if updated:
+        yield y, jd, out_path, ptype
       self._clean()
     self._update_state()
 
@@ -50,7 +153,6 @@ class PrecursorArchive:
     return out_path, ptype, updated
 
   def _update_24day_max(self, y, jd):
-    print(f'Updating 24-day max for {y} / {jd}...')
     std_path = self._get_file_path(y, jd, nrt=False, is_maxmax=True)
     nrt_path = self._get_file_path(y, jd, nrt=True, is_maxmax=True)
     y2, jd2 = self._get_previous_date(y, jd)
@@ -70,8 +172,8 @@ class PrecursorArchive:
         return None, None, False
       inputs_updated = inputs_updated or updated
     if not inputs_updated and os.path.exists(std_path):
-      print(f'Found {std_path}...')
       return std_path, 'std', False
+    print(f'Updating 24-day max for {y} / {jd}...')
     paths, nrt = self._get_24day_max_input_paths(y, jd)
     ptype = 'nrt' if nrt else 'std'
     if inputs_updated and os.path.exists(std_path) and ptype == 'std':
@@ -82,25 +184,26 @@ class PrecursorArchive:
       os.remove(nrt_path)
     ptype = 'nrt' if nrt else 'std'
     out_path = nrt_path if nrt else std_path
-    cmd = f'''gdal_calc.py --debug
-      --calc="
-        maximum(maximum((A<251)*A,(B<251)*B),(C<251)*C)
-        +((A==254)|(B==254)|(C==254))*254
-        +((A==255)&(B==255)&(C==255))*255
-      "
-      --NoDataValue=252
-      --format=HFA
-      --co "STATISTICS=YES"
-      --co "COMPRESSED=YES" 
-      --outfile={out_path}
-      -A {paths[0]} 
-      -B {paths[1]} 
-      -C {paths[2]}
-      --type=Byte
-      --overwrite
+    cmd = f'''
+      gdal_calc.py
+        --calc="
+          maximum(maximum((A<251)*A,(B<251)*B),(C<251)*C)
+          +((A==254)|(B==254)|(C==254))*254
+          +((A==255)&(B==255)&(C==255))*255
+        "
+        --NoDataValue=252
+        --format=HFA
+        --co "STATISTICS=YES"
+        --co "COMPRESSED=YES" 
+        --outfile={out_path}
+        -A {paths[0]} 
+        -B {paths[1]} 
+        -C {paths[2]}
+        --type=Byte
+        --debug
     '''
     try:
-      self.api._run_process(cmd)
+      run_process(cmd)
     except:
       return None, None, False
     return out_path, ptype, True
@@ -223,18 +326,25 @@ class PrecursorArchive:
         state[jd][y]['maxmax'] = s.copy()
     self._state = state
 
-  def _get_file_path(self, y, jd, is_maxmax=False, nrt=False, check=False):
-    filename = self._filename_template(y, jd, nrt=nrt, is_maxmax=is_maxmax)
-    full_path = os.path.join(self._root_dir, jd, filename)
+  def _get_file_path(self, y, jd=None, is_maxmax=False, nrt=False, check=False, year_only=False, ext=None):
+    filename = self._filename_template(y, jd, year_only=year_only, ext=ext, nrt=nrt, is_maxmax=is_maxmax)
+    if not year_only:
+      full_path = os.path.join(self._root_dir, jd, filename)
+    else:
+      full_path = os.path.join(self._year_maxes_root, filename)
     if check and not os.path.exists(full_path):
       raise FileNotFoundError(f'{full_path} does not exist on the file system.')
-    return full_path
+    real_path = os.path.realpath(full_path)
+    return real_path
 
-  def _filename_template(self, y, jd, is_maxmax=False, nrt=False):
-    ext=self._default_file_ext
-    max_prefix=self._default_max_prefix
+  def _filename_template(self, y, jd, is_maxmax=False, nrt=False, year_only=False, ext=None):
+    ext = ext or self._default_file_ext
+    max_prefix = self._default_max_prefix
     maxmax_prefix=self._default_maxmax_prefix
     prefix = maxmax_prefix if is_maxmax else max_prefix
     ptype = 'nrt' if nrt else 'std'
-    filename = f'{prefix}.{y}.{jd}.{ptype}.{ext}'
+    if not year_only:
+      filename = f'{prefix}.{y}.{jd}.{ptype}.{ext}'
+    else:
+      filename = f'{prefix}.{y}.{ptype}.{ext}'
     return filename

@@ -3,6 +3,7 @@ import subprocess
 import os, gzip, glob, shutil
 import requests
 
+from util import *
 
 class Gimms:
 
@@ -21,20 +22,6 @@ class Gimms:
 
   _url_template = 'https://gimms.gsfc.nasa.gov/MODIS/{ptype}/{sat}D09Q1/tif/NDVI/{year}/{jd}/{sat}D09Q1.A{year}{jd}.08d.latlon.x{x}y{y}.6v1.NDVI.tif.gz'
  
-  def _run_process(self, cmd, remove_newlines=True):
-    print('Running subprocess...')
-    print(f'{cmd}')
-    if remove_newlines:
-      cmd = cmd.replace('\n', '')
-    cmd = cmd.strip()
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    with process.stdout:
-      for line in iter(process.stdout.readline, b''):
-        print(line.rstrip().decode("utf-8"))
-    exitcode = process.wait()
-    if exitcode > 0:
-      raise OSError("Process returned with non-zero exit code: {exitcode}.")
-
   def _filename_template(self, year, jd, sat_name=None, nrt=False, prefix=None, ext=None):
     ext = ext or self._file_ext
     prefix = prefix or self._file_prefix
@@ -57,7 +44,7 @@ class Gimms:
       for url in self._get_tile_urls(year=year, jd=jd, sat_name=sat_name, nrt=nrt):
         r = requests.head(url)
         if not r.ok:
-          raise DataNotFoundError('GIMMS {prtype} data not available for {year} / {jd}.')
+          raise DataNotFoundError(f'GIMMS {ptype} data not available for {year} / {jd}.')
 
   def get(self, year, jd, out_dir='.', tmp_dir='./tmp', nrt=False, check=False):
     out_path = self._get(year, jd, out_dir=out_dir, tmp_dir=tmp_dir, nrt=nrt, check=check)
@@ -136,7 +123,7 @@ class Gimms:
         -co "COMPRESSED=YES"
         -o {out_path} {paths_str}
     '''
-    self._run_process(cmd)
+    run_process(cmd)
     for p in tiles:
       if os.path.exists(p):
         os.remove(p)
@@ -166,7 +153,7 @@ class Gimms:
     --type=Byte
     --overwrite
     '''
-    self._run_process(cmd)
+    run_process(cmd)
     if os.path.exists(p1) and remove_inputs:
       os.remove(p1)
     if os.path.exists(p2) and remove_inputs:
@@ -181,12 +168,3 @@ class Gimms:
     if remove:
       os.remove(gz_path)
 
-
-class DataNotFoundError(Exception):
-  pass
-
-class InvalidDateError(Exception):
-  pass
-
-class OverwriteError(Exception):
-  pass

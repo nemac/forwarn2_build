@@ -122,14 +122,6 @@ def modis_8day_max_file_exists(year, jd, product_type, ext='img', verbose=False)
     return False
 
 
-def get_todo_years_missing_all_year_maxes_precursor():
-  '''Returns a list of years (strings) with missing all-year maxes tifs'''
-  tpl = ALL_YEAR_MAXES_PRECURSOR_FILENAME_TEMPLATE
-  ext = ALL_YEAR_MAXES_PRECURSOR_FILE_EXT
-  all_years = get_all_modis_data_years()
-  return list(filter(lambda y: not os.path.exists(os.path.join(ALL_YEAR_MAXES_DIR, tpl.format(y, ext))), all_years))
-
-
 def filter_unavailable_modis_dates(dates):
   '''Given a list of MODIS product dates, remove any dates that are
   either in the future, or are simply too near the present for products
