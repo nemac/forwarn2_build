@@ -2,18 +2,11 @@
 import docker
 import os.path
 
+from config import *
+
 from util import load_env
 
 load_env()
-
-tag = 'gdal:2.4.2'
-dkr_build_dir = '/build'
-precursor_dir = './precursors'
-graph_data_dir = './graph_data'
-name = 'fw2_build'
-build_dir = './gdal_docker'
-dkr_user = 'nappl_fswms'
-dkr_group = 'nappl'
 
 
 def build_gdal():
@@ -27,7 +20,6 @@ def build_gdal():
       'DKR_BUILD_DIR': dkr_build_dir
     }
   )
-  print(gdal_image)
 
 
 def run_gdal(cmd, name=name, volumes=None):
@@ -49,23 +41,9 @@ def run_gdal(cmd, name=name, volumes=None):
     for chunk in container.logs(stream=True):
       print(chunk.decode('UTF-8'), end='')
     print()
+    container.wait()
+    print('Done!')
   except Exception as e:
     print(e) 
 
 
-vols = {
-  os.path.realpath('.'): {
-    'bind': os.path.realpath(dkr_build_dir),
-    'mode': 'rw'
-  },
-  os.path.realpath(precursor_dir): {
-    'bind': os.path.join(dkr_build_dir, precursor_dir),
-    'mode': 'rw'
-  },
-  os.path.realpath(graph_data_dir): {
-    'bind': os.path.join(dkr_build_dir, graph_data_dir),
-    'mode': 'rw'
-  }
-}
-
-run_gdal('/build/dkr_update', volumes=vols)

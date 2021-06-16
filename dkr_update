@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import sys, os, os.path
-
 sys.path.append('/build')
 from bulk_maxes import YearMaxesArchive
 
-archive = YearMaxesArchive()
-archive.update(update_precursors=True)
+bulk_archive = YearMaxesArchive()
+bulk_archive.update(update_precursors=True)

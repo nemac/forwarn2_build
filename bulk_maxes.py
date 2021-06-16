@@ -21,7 +21,9 @@ class YearMaxesArchive:
     self.precursors = precursors or PrecursorArchive()
 
   def update(self, dryrun=False, update_precursors=False):
-    years_updated = [] if not update_precursors else self.precursors.update()
+    all_updated = [] if not update_precursors else self.precursors.update()
+    std_updated = [ d for d in all_updated if d[-1] == 'std' ]
+    years_updated = sorted(set([ d[0] for d in std_updated ]))
     years_missing = self._get_missing_years()
     todo = years_updated + years_missing
     for year in todo:
@@ -50,7 +52,12 @@ class YearMaxesArchive:
   def _gdal_translate_vrt(self, vrt_path, tif_path, dryrun=False):
     '''Use gdal_translate to convert a VRT to a GeoTIFF. Used for creating all-year maxes files.
     '''
-    log.debug(f'Converting VRT to TIF: {vrt_path} {tif_path}')
+    print(f'Converting VRT to TIF: {vrt_path} {tif_path}')
+    print(f'Here is the VRT:\n')
+    with open(vrt_path) as f:
+      for line in f.readlines():
+        print(line)
+
     c = f'''gdal_translate
         -of GTiff
         -co TILED=YES  
@@ -66,7 +73,7 @@ class YearMaxesArchive:
     paths = self._get_vrt_bands(year)
     bounds = self._get_extent(paths, dryrun=dryrun)
     big_vrt_name = 'maxMODIS.{}.std.vrt'.format(year)
-    log.debug("Generating VRT {}...".format(big_vrt_name))
+    print("Generating VRT {}...".format(big_vrt_name))
     if dryrun:
       return big_vrt_name
     for i in range(0, len(paths)):
@@ -88,14 +95,7 @@ class YearMaxesArchive:
     return big_vrt_name
 
   def _get_vrt_bands(self, year):
-    '''Return a list of config dicts for generating an all-year maxes VRT
-    for a given year. The result is a VRT with at most 46 bands, where each band
-    refers to an 8-day Aqua/Terra maximum in the precursor archive.
-
-    Arguments:
-      year: The year to get config for.
-      require_all: Throw an exception if a max file is missing for the current year.
-    '''
+    '''Get a list of paths to the 8-day max files for some year.'''
     f_tpl = MAX_8DAY_PRECURSOR_FILENAME_TEMPLATE
     ext = MAX_8DAY_PRECURSOR_FILENAME_EXT
     bands = []
@@ -136,7 +136,6 @@ class YearMaxesArchive:
       run_process(c)
     return temp_vrt
  
-  # TODO remove duplicate code 
   def _get_extent(self, paths, dryrun=False):
     '''Returns the maximum value for each extent parameter for a list of rasters.'''
     if dryrun:
@@ -152,7 +151,6 @@ class YearMaxesArchive:
     max_bounds = [ max_by_key(bounds, key) for key in ('left', 'bottom', 'right', 'top') ]
     return max_bounds
 
-  # TODO remove duplicate code
   def _check_same_proj(self, paths):
     proj_strings = []
     for p in paths:

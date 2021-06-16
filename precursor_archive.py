@@ -25,119 +25,9 @@ class PrecursorArchive:
     self._update_state()
 
   def update(self):
+    print('Updating precursor archive...')
     all_updated = list(self._update_all())
-    std_updated = [ d for d in all_updated if d[-1] == 'std' ]
-    years_updated = sorted(set([ d[0] for d in std_updated ]))
-    return years_updated
-
-  def _get_8day_max_paths_for_yr(self, year):
-    paths = []
-    for jd in self._jds:
-      try:
-        path, nrt = self._get_best_8day_max_path(year, jd)
-        if not nrt:
-          paths.append({ 'jd': jd, 'path': path })
-      except:
-        pass
-    last_jd = paths[-1]['jd']
-    last_jd_i = self._jds.index(last_jd)
-    assert self._jds[last_jd_i] == last_jd
-    paths = [ d['path'] for d in paths ]
-    not_found = False
-    for jd in self._jds:
-      try:
-        p = self._get_file_path(year, jd, check=True)
-        if not_found:
-          raise DataNotFoundError('Missing std file for {year}!')
-      except FileNotFoundError as e:
-        not_found = True
-        continue
-    return paths
-
-  def _check_same_proj(self, paths):
-    proj_strings = []
-    for p in paths:
-      with rio.Env():
-        with rio.open(p) as src:
-          proj_strings.append(src.profile['crs'].to_proj4())
-    proj_last = proj_strings[0]
-    for proj in proj_strings:
-      if proj_last != proj:
-        raise TypeError('All datasets must have the exact same projection!')
-
-  def _get_largest_extent(self, paths):
-    self._check_same_proj(paths)
-    def max_by_key(iterable, key):
-      return max([ getattr(obj, key) for obj in iterable ])
-    bounds = []
-    for p in paths:
-      with rio.Env():
-        with rio.open(p) as src:
-          bounds.append(src.bounds)
-    max_bounds = [ max_by_key(bounds, key) for key in ('left', 'bottom', 'right', 'top') ]
-    return max_bounds
-
-  def _build_year_vrt(self, year, tmp_dir='./tmp'):
-    paths = self._get_8day_max_paths_for_yr(year)
-    bounds = self._get_largest_extent(paths)
-    img_filename = self._filename_template(year, None, year_only=True)
-    tmp_vrt_filename = f'{img_filename}.vrt'
-    year_vrt_path = os.path.join(tmp_dir, tmp_vrt_filename)
-    for i in range(0, len(paths)):
-      band_num = str(i+1)
-      path = paths[i]
-      temp_vrt = self._build_8day_max_vrt(path, bounds=bounds)
-      if band_num == '1':
-        main_tree = ET.parse(temp_vrt)
-        main_root = main_tree.getroot()
-      else:
-        tree = ET.parse(temp_vrt)
-        root = tree.getroot()
-        bandElement = root.find('VRTRasterBand')
-        bandElement.attrib['band'] = band_num
-        source_element = bandElement.find('ComplexSource')
-        filename_element = source_element.find('SourceFilename')
-        filename_element.text = path
-        filename_element.attrib['relativeToVRT'] = "0"
-        main_root.append(bandElement)
-      try: os.remove(temp_vrt)
-      except: pass
-    main_tree.write(year_vrt_path)
-    return year_vrt_path
-
-  def _build_8day_max_vrt(self, path, tmp_dir='./tmp', bounds=None, vrtnodata=255, band_num=1):
-    print(path)
-    cmd = f'''
-      gdalbuildvrt
-        -vrtnodata "{str(vrtnodata)}"
-        -b {str(band_num)}'''
-    tmp_vrt_path = f'{path}.vrt'
-    if bounds:
-      bounds_string = ' '.join([ str(num) for num in bounds ])
-      cmd += f'''
-        -te { bounds_string }'''
-    cmd += f'''
-        {tmp_vrt_path}
-        {path}
-    '''
-    run_process(cmd)
-    return tmp_vrt_path
-
-  def _get_width_height(self, path):
-    with rio.open(path) as f:
-      width = f.profile['width']
-      height = f.profile['height']
-    return width, height
-
-  def _get_crs(self, path):
-    with rio.open(path) as f:
-      crs = f.crs
-    return crs
-
-  def _get_profile(self, path):
-    with rio.open(path) as f:
-      profile = f.profile
-    return profile
+    return all_updated
 
   def _update_all(self):
     self._update_state()
@@ -208,12 +98,13 @@ class PrecursorArchive:
       return None, None, False
     return out_path, ptype, True
 
-  def _update_8day_max(self, y, jd):
+  def _update_8day_max(self, y, jd, verbose=False):
     _dir = self._get_dir(jd)
     try:
       std_path = self._get_file_path(y, jd, nrt=False)
       if os.path.exists(std_path):
-        print(f'Found std file at {std_path}...')
+        if verbose:
+          print(f'Found std file at {std_path}...')
         return std_path, 'std', False
       std_path = self.api.get(y, jd, out_dir=_dir, check=True)
       return std_path, 'std', True
