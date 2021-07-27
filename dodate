@@ -10,7 +10,8 @@
 #
 # Low-level bash script for building an entire set of products
 # for a single 24-day period (3 MODIS periods).
-# This is where the sausage is made.
+#
+# Author: William Hargrove (EFETAC / USDA)
 #
 # Maintained By: UNCA's NEMAC (nemac@unca.edu)
 #
@@ -30,12 +31,16 @@
 # from distal to proximal
 #  in order of dependency, from the bottom up
 #
-# meanallpriormax.* mean over all prior years, over 3 dates, over 2 sensors
-# sumallpriormax.*  sum over all prior years, over 3 dates, over 2 sensors
-# maxallpriormax.*    max over all prior years, over 3 dates, over 2 sensors
-#  above is for all prior year products
+# Precursors for Prior Year Products:
+#
+#  meanallpriormax.* mean over all prior years, over 3 dates, over 2 sensors
+#  sumallpriormax.*  sum over all prior years, over 3 dates, over 2 sensors
+#  maxallpriormax.*    max over all prior years, over 3 dates, over 2 sensors
+#
+# Precursors for 1, 3, and 5-year Products
+#  
 # maxMODISmaxmax.*  max over all prior years, over 3 dates, over 2 sensors
-#  above is for 1-, 3-, and 5-year products
+#
 #  .std     all 3 dates are from std products
 #  .nrt     first 2 dates are from std, third date is nrt
 # maxMODISalc.*   max over 3 dates, recent priority, over 2 sensors
@@ -59,9 +64,9 @@
 # * = files should already exist
 #
 # use cp command something like this
-#  cp /media/disk/fullwrapper2/maxMODISmaxmax.[135]-yr-baseline.201[76543].DOY.std.img .
-#  cp /media/disk/fullwrapper2/maxMODISmax.201[76543].DOY.std.img .
-#  cp /media/disk/fullwrapper2/maxMODIS.2017.0[876][135].std.img .
+#  cp /precursors/maxMODISmaxmax.[135]-yr-baseline.201[76543].DOY.std.img .
+#  cp /precursors/maxMODISmax.201[76543].DOY.std.img .
+#  cp /precursors/maxMODIS.2017.0[876][135].std.img .
 #
 # harvest back the ?
 #
@@ -120,6 +125,9 @@
 # rather than before the next primary prompt. This is effective
 # only when job control is enabled.
 set -b
+
+# Exit immediately upon any error
+set -e
 
 # Paths to precursors
 ALCpath=.
@@ -195,350 +203,36 @@ DOY2=`echo $YRDOY2 | awk -F/ '{print $2}'`
 YR1=`echo $YRDOY1 | awk -F/ '{print $1}'`
 DOY1=`echo $YRDOY1 | awk -F/ '{print $2}'`
 
-# make the numerator for all products (except ALC)
 
-#################################################################
-#
-#             maxMODIS Precursor Generation
-# 
-#################################################################
-
-##
-#
-# The maxMODIS dataset is the result of comparing three MODIS
-#   products together and selecting the maximum value at each pixel.
-#
-
-# Core state variables
-THIRDDATETYPE=nrt
 YEAR=$YR3
 DOY=$DOY3
 
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
+SECONDDATETYPE=std
+FIRSTDATETYPE=std
 
-# download 26 tiles for conus each from Aqua and from Terra
-echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
+THIRDDATETYPE=std
 
-# Note: these commands use curly brace syntax to generate several commands
+# Assume maxMODIS and maxMODISmax precursors already exist
 
-# download 26 Terra tiles for conus
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-# download 26 Aqua tiles for conus
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-##
-# Try to get STD tiles if NRT is not available for $DOY
-# 
-let numtiles=`ls -1 *.gz | wc -l`
-if [ "$numtiles" == 0 ]; then
-
-  echo "Tiles for DOY "$YEAR $DOY " are not available as nrt!"
-  echo "Attempting to download tiles for this DOY as std!"
-  THIRDDATETYPE=std
-
-  # remove existing Terra and Aqua tile tifs
-  rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-  rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-  # download 26 tiles for conus each from Aqua and from Terra
-  echo "Now downloading DOY " $DOY " of TYPE " $THIRDDATETYPE " for YEAR " $YEAR " via https from NASA GLAM"
-
-  # download 26 Terra tiles for conus
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMOD09Q1/tif/NDVI/$YEAR/$DOY/GMOD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-  # download 26 Aqua tiles for conus
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-  wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$THIRDDATETYPE/GMYD09Q1/tif/NDVI/$YEAR/$DOY/GMYD09Q1.A$YEAR$DOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-fi # Try STD tiles if NRT is not available
-
-# Verify that we got 52 tiles, otherwise stop the script!
-let numtiles=`ls -1 *.gz | wc -l`
-if [ "$numtiles" == 52 ]; then
-  echo "Got 52 tifs for " $YEAR $DOY
-  else
-    echo "ERROR: Tiles MISSING for " $YEAR $DOY " only got " $numtiles
-    echo "Exiting..."
-    # STOP THE PRESS
-    exit 52
+# Check if std is available first
+if [ ! -f maxMODIS.$YR3.$DOY3.std.img ]; then
+  THIRDDATETYPE=nrt
+  if [ ! -f maxMODIS.$YR3.$DOY3.nrt.img ]; then
+    echo "Missing maxMODIS.$YR3.$DOY3.nrt.img... Exiting"
+    exit 1
 fi
 
-gunzip *.gz
+fi
 
-# Mosaic together Terra for this DOY
+if [ ! -f maxMODIS.$YR2.$DOY2.std.img ]; then
+  echo "Missing maxMODIS.$YR2.$DOY2.std.img... Exiting"
+  exit 1
+fi
 
-rm -f Terra.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o "Terra.img"  GMOD09Q1.A$YEAR$DOY*.tif
-echo "done mosaicking Terra images together"
-
-# mosaic together Aqua for this DOY
-rm -f Aqua.img
-gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$YEAR$DOY.*.tif
-echo "done mosaicking Aqua images together"
-
-# remove existing Terra and Aqua tile tifs
-rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-##
-#
-# Take the maximum NDVI from the Terra and Aqua 8-day composites.
-#
-# Raster calculation summary:
-#
-#  Output 255:
-#    - both Aqua and Terra are either 253 or 255
-#    - either Aqua or Terra are 253 with the other 255 (this is not nodata)
-#
-#  Output 254 (water):
-#    - either Aqua or Terra is 254
-# 
-#  NoData value is 252
-
-echo "Taking the maximum NDVI from the Terra and Aqua 8-day composites..."
-
-# find max val composite of Terra and Aqua
-# and propagate two mask values
-gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.img --calc="\
-maximum((A<251)*A,(B<251)*B)\
-+(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
-+((A==254)|(B==254))*254\
-" --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
-rm -f maxMODIS.$YEAR.$DOY.$THIRDDATETYPE.tif
-
-##
-#
-# maxMODIS generation for DOY2 and DOY1
-#
-# Over the two earlier dates in this interval, see if maxMODIS std files exist.
-# If they don't exist, make them.
-
-# Try std first
-FIRSTDATETYPE=std
-SECONDDATETYPE=std
-
-for YRDOY in $YRDOY2 $YRDOY1
-do
-
-  # try std TYPE download first
-  TYPE=std
-
-  PASTYR=`echo $YRDOY | awk -F/ '{print $1}'`
-  PASTDOY=`echo $YRDOY | awk -F/ '{print $2}'`
-
-  # does this maxMODIS PASTDOY double-max std image already exist?
-  # if not, make it
-  if [ ! -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.img ]; then
-    echo "maxMODIS file does not exist for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
-    # get tiles and make it
-    echo "Fetching tiles and generating double max for maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img"
-
-    # remove existing Terra and Aqua tile tifs
-    rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-    rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-    
-    # Download the tiles
-    echo "Now downloading DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
-
-    # 26 Terra tiles
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-    # 26 Aqua tiles
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-    wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-    # Verify we got 52 STD tiles, otherwise try downloading NRT. If NRT fails, quit the script.
-    let numtiles=`ls -1 *.gz | wc -l`
-    if [ "$numtiles" == 52 ]; then
-      echo "Got 52 std tiles for " $PASTYR $PASTDOY $TYPE
-    else
-      # Tiles missing
-      echo "WARNING: std tiles MISSING for " $PASTYR $PASTDOY $TYPE ". Only got " $numtiles " tiles."
-
-      # Verify Terra or try NRT, or quit.
-      let numterratiles=`ls -1 GMOD09Q1.*.gz | wc -l`
-      if [ "$numterratiles" == 26 ]; then
-          echo "Terra ok."
-      else
-        echo "Terra tiles are missing for " $PASTYR $PASTDOY $TYPE "."
-        echo "Trying NRT instead..."
-        TYPE=nrt
-
-        # download 26 Terra tiles for conus
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMOD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMOD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-        let numterratiles=`ls -1 GMOD09Q1.*.gz | wc -l`
-        if [ "$numterratiles" == 26 ]; then
-          echo "Got 26 Terra nrt tiles for " $PASTYR $PASTDOY $TYPE
-          # set nrt TYPE for the right filename in upcoming gdal_calc
-          echo "YRDOY is " $YRDOY
-          echo "YRDOY1 is " $YRDOY1
-          if [ $YRDOY == $YRDOY1 ]; then
-           FIRSTDATETYPE=nrt
-           echo "FIRSTDATETYPE is " $FIRSTDATETYPE
-          else
-           SECONDDATETYPE=nrt
-           echo "SECONDDATETYPE is " $SECONDDATETYPE
-          fi
-        else
-          echo "ERROR: std AND nrt Terra Tiles are still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numterratiles
-          echo "Exiting..."
-          exit 52
-        fi
-      fi # Terra NRT download
-
-      # Verify 26 Aqua tiles or try NRT instead. If NRT fails, quit the script.
-      let numaquatiles=`ls -1 GMYD09Q1.*.gz | wc -l`
-      if [ "$numaquatiles" == 26 ]; then
-        echo "Aqua ok."
-      else
-        echo "WARNING: Only got " $numaquatiles " std Aqua tiles for " $PASTYR $PASTDOY $TYPE
-        echo "Trying nrt for Aqua " $PASTYR $PASTDOY $TYPE " instead..."
-        TYPE=nrt
-
-        # download 26 nrt tiles for conus from Aqua
-        echo "Now downloading Aqua DOY " $PASTDOY " of TYPE " $TYPE " for YEAR " $PASTYR " via https from NASA GLAM"
-
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x06y0{4,5,6}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x0{7,8,9}y0{4,5,6,7}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x1{0,1}y0{4,5,6,7}.6v1.NDVI.tif.gz
-        wget -q -e robots=off -nd -nv -np https://gimms.gsfc.nasa.gov/MODIS/$TYPE/GMYD09Q1/tif/NDVI/$PASTYR/$PASTDOY/GMYD09Q1.A$PASTYR$PASTDOY.08d.latlon.x12y0{4,5,7}.6v1.NDVI.tif.gz
-
-        let numaquatiles=`ls -1 GMYD09Q1.*.gz | wc -l`
-        if [ "$numaquatiles" == 26 ]; then
-          echo "Aqua ok."
-          # set nrt TYPE for the right filename in upcoming gdal_calc
-          echo "YRDOY is " $YRDOY
-          echo "YRDOY1 is " $YRDOY1
-          if [ $YRDOY == $YRDOY1 ]; then
-            FIRSTDATETYPE=nrt
-            echo "FIRSTDATETYPE is " $FIRSTDATETYPE
-          else
-            SECONDDATETYPE=nrt
-            echo "SECONDDATETYPE is " $SECONDDATETYPE
-          fi
-          else
-          echo "ERROR: std AND nrt Aqua Tiles still MISSING for " $PASTYR $PASTDOY $TYPE " only got " $numaquatiles
-          exit 52
-        fi  # 26 Aqua tiles std
-      fi  # 26 Aqua tiles nrt
-    fi  # Getting tiles
-
-    # unzip all tiles
-    gunzip *.gz
-
-    echo "Creating Terra mosaic..."
-    rm -f Terra.img
-    gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Terra.img  GMOD09Q1.A$PASTYR$PASTDOY*.tif
-
-    echo "Creating Aqua mosaic..."
-    rm -f Aqua.img
-    gdal_merge.py -v -init 255 -of HFA -co "STATISTICS=YES" -co "COMPRESSED=YES" -o Aqua.img  GMYD09Q1.A$PASTYR$PASTDOY.*.tif
-
-    # remove existing Terra and Aqua tile tifs
-    rm -f GMOD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-    rm -f GMYD09Q1.*.08d.latlon.*.6v1.NDVI.tif
-
-    ##
-    #
-    # Take the maximum NDVI from the Terra and Aqua 8-day composites.
-    #
-    # (See above for raster calculation summary)
-    #
-    # TYPE is still set from above, std by default, otherwise nrt
-
-    echo "Taking the maximum NDVI from the Terra and Aqua 8-day composites..."
-
-    gdal_calc.py --debug -A Terra.img -B Aqua.img --outfile=maxMODIS.$PASTYR.$PASTDOY.$TYPE.img --calc="\
-    maximum((A<251)*A,(B<251)*B)\
-    +(((A==253)&(B==253))|((A==253)&(B==255))|((A==255)&(B==253))|((A==255)&(B==255)))*255\
-    +((A==254)|(B==254))*254\
-    " --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --NoDataValue=252 --type=Byte --overwrite
-    rm -f maxMODIS.$PASTYR.$PASTDOY.$TYPE.tif
-
-    else
-    echo "maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file already exists"
-    echo "No need to make maxMODIS."$PASTYR"."$PASTDOY"."$TYPE".img file"
-
-  fi
-
-done   # next date over the 2 earlier dates in this interval
-
-#################################################################
-#
-#             maxMODISmax Precursor Generation
-# 
-#################################################################
-
-##
-#
-# Create the maxMODISmax.nrt numerator across the three dates for all products
-# consisting of two std dates and one nrt date (ideally).
-# find 24-day max NDVI triple-max
-#
-# Raster calculation summary:
-#
-# make triple DOY maximum value composite
-# if ANY of three are 254, then 254 = water
-# if ALL three are 255, then 255 = no data
-#
-# Raster calculation summary:
-#
-#  Output 254 (water):
-#   - any of the three datasets are 254
-#
-#  Output 255: 
-#   - if any of the three are 255  
-# 
-#  NoData value is 252
-
-echo
-echo "***************************************************************"
-echo
-echo "Creating maxMODISmax precursor..."
-echo
-echo "FIRSTDATETYPE is " $FIRSTDATETYPE
-echo "SECONDDATETYPE is " $SECONDDATETYPE
-echo "THIRDDATETYPE is " $THIRDDATETYPE
-echo "TYPE is " $TYPE
-echo "DOY1 is " $DOY1
-echo "YR1 is " $YR1
-echo "DOY2 is " $DOY2
-echo "YR2 is " $YR2
-echo "DOY3 is " $DOY3
-echo "YR3 is " $YR3
-
-# must make this nrt triple-max product every time, since this is adding a new nrt date
-
-gdal_calc.py --debug --calc="\
-maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
-+((A==254)|(B==254)|(C==254))*254\
-+((A==255)&(B==255)&(C==255))*255\
-" --NoDataValue=252 --format=HFA --co "STATISTICS=YES" --co "COMPRESSED=YES" --outfile=maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.img -A maxMODIS.$YR1.$DOY1.$FIRSTDATETYPE.img -B maxMODIS.$YR2.$DOY2.$SECONDDATETYPE.img -C maxMODIS.$YR3.$DOY3.$THIRDDATETYPE.img --type=Byte --overwrite
-
-rm -f maxMODISmax.$YR3.$DOY3.$THIRDDATETYPE.tif
+if [ ! -f maxMODIS.$YR1.$DOY1.std.img ]; then
+  echo "Missing maxMODIS.$YR1.$DOY1.std.img... Exiting"
+  exit 1
+fi
 
 
 #################################################################
@@ -839,7 +533,7 @@ maximum( maximum( (A<251)*A,(B<251)*B ),(C<251)*C )\
       # 0 = water
       # 255 = no NDVI value
 
-      if [ ! -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ]
+      if [ ! -f $ALCpath/ALC/ALC2LAEA.$YEAR.$DOY.$PRODUCT-yr-baseline.img ];
       then
         echo "File does not exist for $ALCpath/ALC/ALC2LAEA."$YEAR"."$DOY"."$PRODUCT"-yr-baseline.img"
         echo "Calculating ALC product ..."

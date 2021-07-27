@@ -3,9 +3,9 @@ import requests
 import rasterio as rio
 import xml.etree.ElementTree as ET
 
-from util import *
-from state import *
+import logging as log
 
+from util import *
 from gimms import Gimms
 
 load_env()
@@ -24,10 +24,12 @@ class PrecursorArchive:
     self._init_state()
     self._update_state()
 
+
   def update(self):
-    print('Updating precursor archive...')
+    log.info('Updating precursor archive...')
     all_updated = list(self._update_all())
     return all_updated
+
 
   def _update_all(self):
     self._update_state()
@@ -38,9 +40,11 @@ class PrecursorArchive:
       self._clean()
     self._update_state()
 
+
   def _update_date(self, y, jd):
     out_path, ptype, updated = self._update_24day_max(y, jd)
     return out_path, ptype, updated
+
 
   def _update_24day_max(self, y, jd):
     std_path = self._get_file_path(y, jd, nrt=False, is_maxmax=True)
@@ -63,14 +67,14 @@ class PrecursorArchive:
       inputs_updated = inputs_updated or updated
     if not inputs_updated and os.path.exists(std_path):
       return std_path, 'std', False
-    print(f'Updating 24-day max for {y} / {jd}...')
+    log.info(f'Updating 24-day max for {y} / {jd}...')
     paths, nrt = self._get_24day_max_input_paths(y, jd)
     ptype = 'nrt' if nrt else 'std'
     if inputs_updated and os.path.exists(std_path) and ptype == 'std':
-      print(f'Removing outdated 24-day std max {std_path}...')
+      log.info(f'Removing outdated 24-day std max {std_path}...')
       os.remove(std_path)
     if inputs_updated and os.path.exists(nrt_path) and ptype == 'nrt':
-      print(f'Removing outdated 24-day nrt max {nrt_path}...')
+      log.info(f'Removing outdated 24-day nrt max {nrt_path}...')
       os.remove(nrt_path)
     ptype = 'nrt' if nrt else 'std'
     out_path = nrt_path if nrt else std_path
@@ -98,18 +102,19 @@ class PrecursorArchive:
       return None, None, False
     return out_path, ptype, True
 
+
   def _update_8day_max(self, y, jd, verbose=False):
     _dir = self._get_dir(jd)
     try:
       std_path = self._get_file_path(y, jd, nrt=False)
       if os.path.exists(std_path):
         if verbose:
-          print(f'Found std file at {std_path}...')
+          log.info(f'Found std file at {std_path}...')
         return std_path, 'std', False
       std_path = self.api.get(y, jd, out_dir=_dir, check=True)
       return std_path, 'std', True
     except DataNotFoundError as e:
-      print('No std data available, trying nrt instead...')
+      log.info('No std data available, trying nrt instead...')
       nrt_path = self._get_file_path(y, jd, nrt=True)
       if os.path.exists(nrt_path):
         return nrt_path, 'nrt', False
@@ -117,6 +122,7 @@ class PrecursorArchive:
       return nrt_path, 'nrt', True
     except DataNotFoundError as e:
       return None, None, False
+
 
   def _get_24day_max_input_paths(self, y, jd):
     y1, jd1 = y, jd
@@ -127,10 +133,12 @@ class PrecursorArchive:
     p3, p3nrt = self._get_best_8day_max_path(y3, jd3)
     nrt = True in [ p1nrt, p2nrt, p3nrt ]
     return (p1, p2, p3), nrt
+
   
   def _get_dir(self, jd):
     p = os.path.join(self._root_dir, jd)
     return p
+
     
   def _get_best_8day_max_path(self, y, jd, std_only=False):
     std_ok = self._check(y, jd)
@@ -143,6 +151,7 @@ class PrecursorArchive:
     if nrt_ok:
       return self._get_file_path(y, jd, nrt=True), nrt_ok
     raise FileNotFoundError(f"No 8-day max found for {y} / {jd}.")
+
  
   def _get_previous_date(self, y, jd):
     try:
@@ -154,6 +163,7 @@ class PrecursorArchive:
     p_jd_i = self._jds.index(jd)-1
     p_jd = self._jds[p_jd_i]
     return p_y, p_jd
+
     
   def _check(self, y, jd, nrt=False, is_maxmax=False):
     try:
@@ -161,6 +171,7 @@ class PrecursorArchive:
     except FileNotFoundError:
       return False
     return True
+
 
   def _clean(self):
     self._update_state()
@@ -170,9 +181,10 @@ class PrecursorArchive:
         os.remove(path)
       if d['maxmax']['std'] and d['maxmax']['nrt']:
         path = self._get_file_path(y=y, jd=jd, nrt=True, is_maxmax=True)
-        print(f'Removing {path}...')
+        log.info(f'Removing {path}...')
         os.remove(path)
     self._update_state()
+
 
   def _update_state(self):
     for d, y, jd in self._walk_state():
@@ -181,10 +193,12 @@ class PrecursorArchive:
       d['max']['nrt'] = self._check(y, jd, nrt=True, is_maxmax=False)
       d['maxmax']['nrt'] = self._check(y, jd, nrt=True, is_maxmax=True)
 
+
   def _walk_state(self):
     for jd in self._state.keys():
       for y in self._state[jd].keys():
         yield self._state[jd][y], y, jd
+
 
   def _init_state(self):
     '''Example state dict:
@@ -206,7 +220,7 @@ class PrecursorArchive:
     for jd in self._jds:
       state[jd] = {}
       for y in get_all_modis_data_years():
-        dt = get_datetime_for_yr_jd(y, jd)
+        dt = datetime.datetime.strptime('{y}{jd}'.format(y=y, jd=jd), '%Y%j')
         today = datetime.datetime.today()
         if dt > today - datetime.timedelta(days=day_delta):
           # skip unavailable dates
@@ -216,6 +230,7 @@ class PrecursorArchive:
         state[jd][y]['max'] = s
         state[jd][y]['maxmax'] = s.copy()
     self._state = state
+
 
   def _get_file_path(self, y, jd=None, is_maxmax=False, nrt=False, check=False, year_only=False, ext=None):
     filename = self._filename_template(y, jd, year_only=year_only, ext=ext, nrt=nrt, is_maxmax=is_maxmax)
@@ -227,6 +242,7 @@ class PrecursorArchive:
       raise FileNotFoundError(f'{full_path} does not exist on the file system.')
     real_path = os.path.realpath(full_path)
     return real_path
+
 
   def _filename_template(self, y, jd, is_maxmax=False, nrt=False, year_only=False, ext=None):
     ext = ext or self._default_file_ext

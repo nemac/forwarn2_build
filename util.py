@@ -55,6 +55,26 @@ class OverwriteError(Exception):
 ## Helpers
 #
 
+
+def clean_all(base_dir='.', dryrun=False):
+  exts = [ 'img', 'gz', 'tif', 'vrt' ]
+  all_jds = ALL_MODIS_JULIAN_DAYS
+  files = os.listdir(base_dir)
+  for f in files:
+    for ext in exts:
+      if f.endswith(ext):
+        os.remove(f)
+
+
+def get_all_modis_data_years():
+  '''Return a list of years (strings) for which MODIS data is available on the GIMMS server.'''
+  start = int(MODIS_DATA_YEAR_START)
+  today = datetime.datetime.today()
+  this_year = today.strftime('%Y')
+  all_years = list(range(start, int(this_year)+1 ))
+  return [ str(y) for y in all_years ]
+
+
 def run_process(cmd, remove_newlines=True):
   log.info('Running subprocess...')
   log.info(f'{cmd}')
@@ -64,14 +84,14 @@ def run_process(cmd, remove_newlines=True):
   process = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
   with process.stdout:
     for line in iter(process.stdout.readline, b''):
-      log.info(line.rstrip().decode("utf-8"))
+      log.debug(line.rstrip().decode("utf-8"))
   exitcode = process.wait()
   if exitcode > 0:
     raise OSError(f"Process returned with non-zero exit code: {exitcode}.")
 
 
 def get_default_log_path():
-  now = get_now_est(time_format=LOG_FILE_TIMESTAMP_FORMAT)
+  now = datetime.datetime.now().strftime(LOG_FILE_TIMESTAMP_FORMAT)
   log_path = LOG_PATH_TEMPLATE.format(now)
   return log_path
 
@@ -88,7 +108,7 @@ def get_log_path(logger=None):
     return paths[0]
 
 
-def init_log(level=log.DEBUG, log_path=None, dryrun=False):
+def init_log(level=log.DEBUG, log_path=None, dryrun=False, use_file=True):
   '''Initialize logging.''' 
   logger = log.getLogger()
   for handler in logger.handlers:
@@ -98,9 +118,11 @@ def init_log(level=log.DEBUG, log_path=None, dryrun=False):
   else:
     formatter_string = '[%(asctime)s] [%(levelname)s] %(message)s'
   formatter = log.Formatter(formatter_string)
-  file_handler = log.FileHandler(filename=log_path or get_default_log_path(), mode='a')
+  if use_file:
+    log_path = log_path or get_default_log_path()
+    file_handler = log.FileHandler(filename=log_path, mode='a')
+    logger.addHandler(file_handler)
   stream_handler = log.StreamHandler()
-  logger.addHandler(file_handler)
   logger.addHandler(stream_handler)
   for handler in logger.handlers[:]:
     handler.setFormatter(formatter)
@@ -185,36 +207,4 @@ def check_is_only_instance_or_quit():
     sys.exit() 
 
 
-def delete_staging_precursors(base_dir='.', ext='img', dryrun=False):
-  '''Remove staging precursor files with file extension {ext} in {base_dir}.
-
-  This function removes any file ending in {img} in the folder {base_dir} that
-  is NOT a maxMODIS or maxMODISmax precursor.'''
-  staging_precursors = [
-    '10thallpriormax',
-    '90thallpriormax',
-    'maxMODISalc',
-    'maxMODISmax90.10-yr-baseline',
-    'maxMODISmax90.5-yr-baseline',
-    'maxMODIS.1-yr-baseline',
-    'maxMODISmaxmax.1-yr-baseline',
-    'maxMODISmaxmax.3-yr-baseline',
-    'maxMODISmaxmax.5-yr-baseline',
-    'medianallpriormax'
-  ]
-  all_jds = ALL_MODIS_JULIAN_DAYS
-  files = os.listdir(base_dir)
-  for f in files:
-    if f.endswith(ext) and not os.path.islink(f):
-      # only move maxMODIS and maxMODISmax precursors
-      for s in staging_precursors:
-        if s in f:
-          log.info("Removing staging precursor {}".format(f))
-          if not dryrun:
-            p = os.path.realpath(os.path.join(base_dir, f))
-            os.remove(p)
-  if 'Aqua.img' in files and not dryrun:
-    os.remove(os.path.join(base_dir, 'Aqua.img'))
-  if 'Terra.img' in files and not dryrun:
-    os.remove(os.path.join(base_dir, 'Terra.img'))
 

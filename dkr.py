@@ -2,36 +2,35 @@
 import docker
 import os.path
 
-from config import *
-
 from util import load_env
 
-load_env()
+import logging as log
 
+load_env(ns=globals())
 
 def build_gdal():
   client = docker.from_env()
   gdal_image = client.images.build(
-    path=build_dir,
-    tag=tag,
+    path=DKR_BUILD_DIR_HOST,
+    tag=DKR_IMAGE_TAG,
     buildargs={
-      'DKR_USER': dkr_user,
-      'DKR_GROUP': dkr_group,
-      'DKR_BUILD_DIR': dkr_build_dir
+      'DKR_USER': DKR_USER,
+      'DKR_GROUP': DKR_GROUP,
+      'DKR_BUILD_DIR': DKR_BUILD_DIR
     }
   )
 
 
-def run_gdal(cmd, name=name, volumes=None):
+def run_gdal(cmd, volumes=None):
   client = docker.from_env()
   containers = client.containers.list()
-  if name in [ c.name for c in containers ]:
-    print("Already running!")
+  if DKR_CONTAINER_NAME in [ c.name for c in containers ]:
+    log.info("Already running!")
     return
   try:
-    container = client.containers.run(tag,
+    container = client.containers.run(DKR_IMAGE_TAG,
         command=cmd,
-        name=name,
+        name=DKR_CONTAINER_NAME,
         network_mode='host',
         auto_remove=True,
         volumes=volumes,
@@ -40,10 +39,8 @@ def run_gdal(cmd, name=name, volumes=None):
     )
     for chunk in container.logs(stream=True):
       print(chunk.decode('UTF-8'), end='')
-    print()
     container.wait()
-    print('Done!')
   except Exception as e:
-    print(e) 
+    log.error(e) 
 
 

@@ -1,33 +1,31 @@
 #!/usr/bin/env python3
 
 from util import *
+import logging as log
 
-from dkr import run_gdal
-
-from config import *
+load_env()
 
 
 class ForWarn2Archive:
 
-  def update(self):
+  def update(self, dryrun=False):
     # ForWarn 2 products
     todo_dates = self.get_todo_dates()
-    self.make_symlinks_for_dates(todo_dates, dryrun=dryrun)
+    self.make_symlinks_for_dates(todo_dates)
     success = True
     for d in todo_dates:
       # Add a boolean called 'success' to each dict
       self.build_date(d, archive=True, dryrun=dryrun)
     if not len(todo_dates):
       log.info("Already up to date!")
-      os.remove(log_path)
+      return []
     else:
       log.info('Finished production cycle.')
-      mail_results(dates=todo_dates, dryrun=dryrun)
+      return todo_dates
 
-  def build_date(date, archive=False, log_path=None, dryrun=False):
-    # TODO flesh out this docstring
-    '''Build a full set of ForWarn 2 products for some date.
-    '''
+
+  def build_date(self, date, archive=False, dryrun=False):
+    '''Build a full set of ForWarn 2 products for some date.'''
     year = date['year']
     jd = date['jd']
     log.info("Building ForWarn 2 products for {}/{}...\n".format(year, jd))
@@ -36,23 +34,25 @@ class ForWarn2Archive:
       run_process(c)
     success = False
     if archive:
-      self.move(date, dryrun=dryrun)
-      if is_ok(date, dryrun=dryrun):
+      self.move_products(date, dryrun=dryrun)
+      if self.is_ok(date, dryrun=dryrun):
         success = True
       else:
         success = False
         log.error('Something went wrong while trying to move the product files to their destination.')
     date['success'] = success
+    self.move_precursors(dryrun=dryrun)
     return date
 
-  def is_ok(date):
+
+  def is_ok(self, date, dryrun=False):
     '''Return True if a full set of products exist for the given date.
 
     Arguments:
-      date_config: dict of the form { 'year': 'YYYY', 'jd': 'DOY' }
+      date: dict of the form { 'year': 'YYYY', 'jd': 'DOY' }
     '''
-    year = date_config['year']
-    jd = date_config['jd']
+    year = date['year']
+    jd = date['jd']
     date = self.get_datetime_for_year_jd(year, jd)
     file_date = date + datetime.timedelta(days=7)
     datestring = file_date.strftime('%Y%m%d')
@@ -69,7 +69,7 @@ class ForWarn2Archive:
         files = os.listdir(dir_path)
         files = list(filter(lambda f: datestring in f, files))
         if not len(files):
-          log.debug("Unable to find file in archive for {} {} {}".format(source_dir, dodate_dir, datestring))
+          log.info("Unable to find file in archive for {} {} {}".format(source_dir, dodate_dir, datestring))
           all_products_exist = False
     if not all_products_exist:
       log.warn("Missing ForWarn 2 products in the archive for {}/{}...".format(year, jd))
@@ -78,13 +78,42 @@ class ForWarn2Archive:
     return all_products_exist
 
 
-  def move(date, dryrun=False):
+  def move_precursors(self, base_dir='.', dryrun=False):
+    # Remove Aqua.img and Terra.img
+    try:
+      os.remove('Aqua.img')
+      os.remove('Terra.img')
+    except:
+      pass
+    staging_precursors = [
+      'maxMODIS', # this string covers several different precursors
+      '10thallpriormax',
+      '90thallpriormax',
+      'medianallpriormax'
+    ]
+    all_jds = ALL_MODIS_JULIAN_DAYS
+    files = [ f for f in os.listdir('.') if f.endswith('.img') and not os.path.islink(f) ]
+    for f in files:
+      for s in staging_precursors:
+        if s in f:
+          for jd in ALL_MODIS_JULIAN_DAYS:
+            pattern = ".*\d{4}\."+jd+".*\.img"
+            m = re.search(pattern, f)
+            if m:
+              src = os.path.abspath(os.path.join(base_dir, f))
+              dst = os.path.abspath(os.path.join(PRECURSORS_DIR, jd, f))
+              log.info("Moving precursor:\n  {src}\n  to...\n  {dst}".format(src=src, dst=dst))
+              if not dryrun:
+                shutil.move(src, dst)
+
+
+  def move_products(self, date, dryrun=False):
     '''Move new products from the staging directories to the archive.'''
     normal_filename_checks = FW2_NORMAL_DODATE_FILENAME_CHECK.split(',')
     muted_filename_checks = FW2_MUTED_DOATE_FILENAME_CHECK.split(',')
     same_checks = list(filter(lambda d: d in muted_filename_checks, normal_filename_checks))
     if len(same_checks):
-      print("Duplicate strings detected for detecting if a file output from dodate is \
+      log.info("Duplicate strings detected for detecting if a file output from dodate is \
         either normal or muted. See FW2_(NORMAL|MUTED)_DODATE_FILENAME_CHECK in .env. \
         Each string should be a comma-separated list of values, with no duplicates across both lists.") 
       sys.exit(1)
@@ -111,7 +140,8 @@ class ForWarn2Archive:
             # TODO try block?
             os.remove(old_fullpath)
 
-  def get_folder_tree():
+
+  def get_folder_tree(self):
     # Assume product directories are nested below the "meta" product type dir
     # (normal or muted/sqrt)
     tree = {
@@ -136,7 +166,8 @@ class ForWarn2Archive:
     }
     return tree
 
-  def rename_dodate_filename(filename):
+
+  def rename_dodate_filename(self, filename):
     '''Construct the final filename for a ForWarn 2 product file given
     the filename created by the dodate script.'''
     m = re.search("(.*)(\d{4})\.(\d{3})(.*)", filename)
@@ -151,9 +182,10 @@ class ForWarn2Archive:
       new_filename = ''.join(new_pieces)
       return new_filename
     else:
-      print("Failed to rename filename: {0}".format(filename))
+      log.info("Failed to rename filename: {0}".format(filename))
 
-  def get_todo_dates():
+
+  def get_todo_dates(self):
     '''Get a list of potential dates for which ForWarn 2 products may be built.
 
     Return a list of MODIS product dates in the past two years for which:
@@ -173,20 +205,23 @@ class ForWarn2Archive:
     potential_last_year_todo_dates = self.filter_unavailable_modis_dates(last_year_todo_dates)
     potential_todo_dates = potential_this_year_todo_dates + potential_last_year_todo_dates
     potential_todo_date_dicts = list(map(self.get_year_jd_config_for_datetime, potential_todo_dates))
-    todo_dates = list(filter(lambda d: not is_ok(d), potential_todo_date_dicts))
+    todo_dates = list(filter(lambda d: not self.is_ok(d), potential_todo_date_dicts))
     return todo_dates
 
-  def get_datetime_for_year_jd(year, jd):
+
+  def get_datetime_for_year_jd(self, year, jd):
     '''Return a datetime object for a date given a year and day of the year.'''
     return datetime.datetime.strptime('{}{}'.format(year, jd), '%Y%j')
 
-  def get_year_jd_config_for_datetime(date):
+
+  def get_year_jd_config_for_datetime(self, date):
     '''Given a datetime object, return a dictionary of the form
     { 'year': 'YYYY', 'jd': 'JJJ' } where JJJ is a zero-padded day of the year.
     '''
     return { 'year': date.strftime('%Y'), 'jd': date.strftime('%j') }
 
-  def filter_unavailable_modis_dates(dates):
+
+  def filter_unavailable_modis_dates(self, dates):
     '''Given a list of MODIS product dates, remove any dates that are
     either in the future, or are simply too near the present for products
     to be available yet (at most 8 days in the past from the current day).'''
@@ -194,7 +229,8 @@ class ForWarn2Archive:
     today = datetime.datetime.today()
     return list(filter(lambda d: d <= today - datetime.timedelta(days=day_delta), dates))
 
-  def get_three_dates(year, jd):
+
+  def get_three_dates(self, year, jd):
     '''Given the year and julian day for an 8-day MODIS product, return a list of 
     three MODIS product dates: the supplied date first, followed by the previous two
     MODIS dates. These three dates represent the three 8-day MODIS cycles that
@@ -211,12 +247,14 @@ class ForWarn2Archive:
       dates[2] = { 'jd' : '353', 'year' : str(int(year)-1) }
     return dates
 
-  def make_symlinks_for_dates(dates, dryrun=False):
+
+  def make_symlinks_for_dates(self, dates):
     '''Make symbolic links in the current directory to any precursors that may be useful for creating ForWarn 2 products for the given dates.
 
     dates: a list of dicts, each with two keys, 'year' and 'jd'
     '''
     jds = []
+    log.debug("Symlinking precursor files to this directory...")
     for d in dates:
       year = d['year']
       jd = d['jd']
@@ -225,11 +263,11 @@ class ForWarn2Archive:
       jds.extend(three_jds)
     jds = sorted(set(jds))
     for jd in jds:
-      self.link_by_pattern(PRECURSORS_DIR, '.', ".*\d{4}\."+jd+".*\.img", dryrun=dryrun) 
+      self.link_by_pattern(PRECURSORS_DIR, '.', ".*\d{4}\."+jd+".*\.img")
 
-  def link_by_pattern(source_dir, dest_dir, pattern, dryrun=False):
+
+  def link_by_pattern(self, source_dir, dest_dir, pattern):
     '''Recursively walk source_dir and make a symlink in dest_dir for every file found if the file matches the supplied regex pattern.'''
-    log.debug(f"Making symlinks for all files found here:\n{source_dir}into...\n{dest_dir}\nthat match this pattern: {pattern}")
     found_at_least_one_match = False
     for root, dirs, files in os.walk(source_dir):
         for filename in files:
@@ -239,8 +277,7 @@ class ForWarn2Archive:
                 src = os.path.abspath(os.path.join(root, filename))
                 dst = os.path.abspath(os.path.join(dest_dir, filename))
                 try:
-                  if not dryrun:
-                    os.symlink(src, dst)
+                  os.symlink(src, dst)
                 except:
                   pass
             else:

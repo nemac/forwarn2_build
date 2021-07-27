@@ -4,11 +4,8 @@ import rasterio as rio
 import xml.etree.ElementTree as ET
 
 from util import *
-from state import *
 from precursor_archive import PrecursorArchive
 
-
-load_env()
 
 class YearMaxesArchive:
 
@@ -17,8 +14,10 @@ class YearMaxesArchive:
   _root_dir = './graph_data'
 
   def __init__(self, precursors=None, root_dir=None, dryrun=False):
+    load_env()
     self._root_dir = root_dir or self._root_dir
     self.precursors = precursors or PrecursorArchive()
+
 
   def update(self, dryrun=False, update_precursors=False):
     all_updated = [] if not update_precursors else self.precursors.update()
@@ -28,6 +27,7 @@ class YearMaxesArchive:
     todo = years_updated + years_missing
     for year in todo:
       self.build_tif(year, dryrun=dryrun)
+
 
   def build_tif(self, year, dryrun=False):
     '''Build a new 46-band tif where each band represents an 8-day NDVI maximum.'''
@@ -42,12 +42,14 @@ class YearMaxesArchive:
     os.rename(new_tif_path_tmp, os.path.join(self._root_dir, tif_filename))
     os.remove(vrt_filename)
 
+
   def _get_missing_years(self):
     '''Returns a list of years (strings) with missing all-year maxes tifs'''
     tpl = ALL_YEAR_MAXES_PRECURSOR_FILENAME_TEMPLATE
     ext = ALL_YEAR_MAXES_PRECURSOR_FILE_EXT
     all_years = get_all_modis_data_years()
     return list(filter(lambda y: not os.path.exists(os.path.join(self._root_dir, tpl.format(y, ext))), all_years))
+
 
   def _gdal_translate_vrt(self, vrt_path, tif_path, dryrun=False):
     '''Use gdal_translate to convert a VRT to a GeoTIFF. Used for creating all-year maxes files.
@@ -68,6 +70,7 @@ class YearMaxesArchive:
     '''
     if not dryrun:
       run_process(c)
+
 
   def _build_year_vrt(self, year, dryrun=False):
     paths = self._get_vrt_bands(year)
@@ -94,6 +97,7 @@ class YearMaxesArchive:
     main_tree.write(big_vrt_name)
     return big_vrt_name
 
+
   def _get_vrt_bands(self, year):
     '''Get a list of paths to the 8-day max files for some year.'''
     f_tpl = MAX_8DAY_PRECURSOR_FILENAME_TEMPLATE
@@ -109,6 +113,7 @@ class YearMaxesArchive:
       else:
         continue
     return bands
+
 
   def _build_8day_vrt(self, path, bounds=None, vrtnodata=255, band_num=1, dryrun=False):
     '''Wrapper for gdalbuildvrt. Build a 1-band VRT.
@@ -135,6 +140,7 @@ class YearMaxesArchive:
     if not dryrun:
       run_process(c)
     return temp_vrt
+
  
   def _get_extent(self, paths, dryrun=False):
     '''Returns the maximum value for each extent parameter for a list of rasters.'''
@@ -150,6 +156,7 @@ class YearMaxesArchive:
           bounds.append(src.bounds)
     max_bounds = [ max_by_key(bounds, key) for key in ('left', 'bottom', 'right', 'top') ]
     return max_bounds
+
 
   def _check_same_proj(self, paths):
     proj_strings = []

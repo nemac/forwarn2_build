@@ -1,26 +1,15 @@
+#!/usr/bin/env python3
+
+import os.path
+
+from volumes import vols
+from util import load_env, clean_all
 from dkr import run_gdal
 
-vols = {
-  os.path.realpath('./ForWarn2'): {
-    'bind': os.path.join(dkr_build_dir, 'ForWarn2'),
-    'mode': 'rw'
-  },
-  os.path.realpath('./ForWarn2_Sqrt'): {
-    'bind': os.path.join(dkr_build_dir, 'ForWarn2_Sqrt'),
-    'mode': 'rw'
-  },
-  os.path.realpath('.'): {
-    'bind': os.path.realpath(dkr_build_dir),
-    'mode': 'rw'
-  },
-  os.path.realpath(precursor_dir): {
-    'bind': os.path.join(dkr_build_dir, precursor_dir),
-    'mode': 'rw'
-  },
-  os.path.realpath(graph_data_dir): {
-    'bind': os.path.join(dkr_build_dir, graph_data_dir),
-    'mode': 'rw'
-  }
-}
+load_env(ns=globals())
 
-run_gdal('/build/dkr_update', volumes=vols)
+try:
+  run_gdal(os.path.join(DKR_BUILD_DIR, 'dkr_update'), volumes=vols)
+finally:
+  clean_all()
+
