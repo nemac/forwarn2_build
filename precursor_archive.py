@@ -103,13 +103,12 @@ class PrecursorArchive:
     return out_path, ptype, True
 
 
-  def _update_8day_max(self, y, jd, verbose=False):
+  def _update_8day_max(self, y, jd):
     _dir = self._get_dir(jd)
     try:
       std_path = self._get_file_path(y, jd, nrt=False)
       if os.path.exists(std_path):
-        if verbose:
-          log.info(f'Found std file at {std_path}...')
+        log.debug(f'Found std file at {std_path}...')
         return std_path, 'std', False
       std_path = self.api.get(y, jd, out_dir=_dir, check=True)
       return std_path, 'std', True

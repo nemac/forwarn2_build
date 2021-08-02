@@ -3,7 +3,7 @@
 import os.path
 
 from volumes import vols
-from util import load_env, clean_all
+from util import load_env, clean_all, chown_all
 from dkr import run_gdal
 
 load_env(ns=globals())

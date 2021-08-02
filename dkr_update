@@ -6,15 +6,17 @@ import logging as log
 sys.path.append('/build')
 from bulk_maxes import YearMaxesArchive
 from fw2_archive import ForWarn2Archive
-from util import init_log, mail_results
+from util import init_log, mail_results, chown_all
 
 init_log()
 
-#bulk_archive = YearMaxesArchive()
-#bulk_archive.update(update_precursors=True)
+bulk_archive = YearMaxesArchive()
+bulk_archive.update(update_precursors=True)
 
 archive = ForWarn2Archive()
 dates = archive.update()
+
+chown_all()
 
 if len(dates):
   log.info('Emailing results...')

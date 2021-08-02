@@ -1,9 +1,10 @@
 import smtplib
 from email.message import EmailMessage
 
-from subprocess import Popen, PIPE, STDOUT
 import os, os.path, sys, re, traceback, shutil, datetime
+from shutil import chown
 from pytz import timezone
+from subprocess import Popen, PIPE, STDOUT
 
 from tempfile import NamedTemporaryFile
 import base64
@@ -55,6 +56,24 @@ class OverwriteError(Exception):
 ## Helpers
 #
 
+def chown_all():
+  # The call is coming from... inside the container!
+  log.debug(f'Changing owner:group of all files to {DKR_USER}:{DKR_GROUP}')
+  folders = [
+    os.path.realpath(DKR_BUILD_DIR),
+    os.path.join(DKR_BUILD_DIR, FW2_ARCHIVE_DIR_NORMAL),
+    os.path.join(DKR_BUILD_DIR, FW2_ARCHIVE_DIR_MUTED),
+    os.path.join(DKR_BUILD_DIR, PRECURSORS_DIR),
+    os.path.join(DKR_BUILD_DIR, ALL_YEAR_MAXES_DIR),
+  ]
+  for folder in folders:
+    shutil.chown(os.path.realpath(folder), user=DKR_USER, group=DKR_GROUP)
+    for root, dirs, files in os.walk(folder):
+      for f in files:
+        shutil.chown(os.path.join(root, f), user=DKR_USER, group=DKR_GROUP)
+      for _dir in dirs:
+        shutil.chown(os.path.join(root, _dir), user=DKR_USER, group=DKR_GROUP) 
+
 
 def clean_all(base_dir='.', dryrun=False):
   exts = [ 'img', 'gz', 'tif', 'vrt' ]
@@ -63,6 +82,7 @@ def clean_all(base_dir='.', dryrun=False):
   for f in files:
     for ext in exts:
       if f.endswith(ext):
+        log.info(f'Removing {f}')
         os.remove(f)
 
 

@@ -5,8 +5,7 @@ import os, os.path, shutil
 from gimms import Gimms, DataNotFoundError
 from precursor_archive import PrecursorArchive
 
-precursor_dir = './precursors'
-test_root = './test/precursors'
+from test_util import *
 
 tmp_dir = './tmp'
 out_dir='./tmp'
@@ -18,18 +17,22 @@ jd = '121'
 class TestPrecursorArchive(unittest.TestCase):
   
   def setUp(self):
-    self.archive = PrecursorArchive(root_dir=test_root)
+    test_root = get_test_dir(PRECURSORS_DIR)
+    if not os.path.exists(test_root):
+        os.mkdir(test_root)
+        link_archive(PRECURSORS_DIR, test_root)
+    self.archive = PrecursorArchive(root_dir=get_test_dir(PRECURSORS_DIR))
 
   def test__update_all(self):
     pass
 
-  def test___update_date(self):
+  def test__update_date(self):
     pass
 
-  def test___update_24day_max(self):
+  def test__update_24day_max(self):
     pass
 
-  def test___update_8day_max(self):
+  def test__update_8day_max(self):
     pass
 
   def test__get_24day_max_input_paths(self):
@@ -38,7 +41,7 @@ class TestPrecursorArchive(unittest.TestCase):
   def test__get_dir(self):
     pass
 
-  def test___get_best_8day_max_path(self):
+  def test__get_best_8day_max_path(self):
     pass
 
   def test__get_previous_date(self):
@@ -132,13 +135,6 @@ class TestGimms(unittest.TestCase):
     self.assertTrue(f_std.endswith(ext))
     self.assertTrue(f_sat.endswith(ext))
 
-
-def link_archive(src=precursor_dir, dst=test_root):
-  def copy3(src, dst):
-    src = os.path.realpath(src)
-    dst = os.path.realpath(dst)
-    os.symlink(src, dst)
-  shutil.copytree(src, dst, copy_function=copy3)
 
 if __name__ == '__main__':
   unittest.main()
