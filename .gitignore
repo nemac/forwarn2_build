@@ -1,15 +1,14 @@
-mail_to_addrs.txt
-RUNNING
-*.nc
+mail_to.txt
 *.img
-todo_product_days
 1-yr-max/*
 3-yr-max/*
 5-yr-max/*
 ALC/*
 median-all-yr-max/*
 pctprogress/*
-logs/*
+log/*
+*.gz
+*.vrt
 
 # vim swap files
 *.swp
@@ -119,3 +118,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+ForWarn2
+ForWarn2_Sqrt
+precursors
+graph_data
