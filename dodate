@@ -209,7 +209,6 @@ DOY=$DOY3
 
 SECONDDATETYPE=std
 FIRSTDATETYPE=std
-
 THIRDDATETYPE=std
 
 # Assume maxMODIS and maxMODISmax precursors already exist
@@ -222,16 +221,18 @@ if [ ! -f maxMODIS.$YR3.$DOY3.std.img ]; then
     exit 1
 fi
 
-fi
-
 if [ ! -f maxMODIS.$YR2.$DOY2.std.img ]; then
-  echo "Missing maxMODIS.$YR2.$DOY2.std.img... Exiting"
-  exit 1
+  SECONDDATETYPE=nrt
+  if [ ! -f maxMODIS.$YR2.$DOY2.nrt.img ]; then
+    echo "Missing maxMODIS.$YR2.$DOY2.nrt.img... Exiting"
+    exit 1
 fi
 
 if [ ! -f maxMODIS.$YR1.$DOY1.std.img ]; then
-  echo "Missing maxMODIS.$YR1.$DOY1.std.img... Exiting"
-  exit 1
+  FIRSTDATETYPE=nrt
+  if [ ! -f maxMODIS.$YR1.$DOY1.nrt.img ]; then
+    echo "Missing maxMODIS.$YR1.$DOY1.nrt.img... Exiting"
+    exit 1
 fi
 
 
