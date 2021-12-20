@@ -219,6 +219,7 @@ if [ ! -f maxMODIS.$YR3.$DOY3.std.img ]; then
   if [ ! -f maxMODIS.$YR3.$DOY3.nrt.img ]; then
     echo "Missing maxMODIS.$YR3.$DOY3.nrt.img... Exiting"
     exit 1
+  fi
 fi
 
 if [ ! -f maxMODIS.$YR2.$DOY2.std.img ]; then
@@ -226,6 +227,7 @@ if [ ! -f maxMODIS.$YR2.$DOY2.std.img ]; then
   if [ ! -f maxMODIS.$YR2.$DOY2.nrt.img ]; then
     echo "Missing maxMODIS.$YR2.$DOY2.nrt.img... Exiting"
     exit 1
+  fi
 fi
 
 if [ ! -f maxMODIS.$YR1.$DOY1.std.img ]; then
@@ -233,6 +235,7 @@ if [ ! -f maxMODIS.$YR1.$DOY1.std.img ]; then
   if [ ! -f maxMODIS.$YR1.$DOY1.nrt.img ]; then
     echo "Missing maxMODIS.$YR1.$DOY1.nrt.img... Exiting"
     exit 1
+  fi
 fi
 
 
