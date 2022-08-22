@@ -54,7 +54,6 @@ class Gimms:
     out_path = os.path.join(out_dir, self._filename_template(year, jd, nrt=nrt))
     ptype = 'nrt' if nrt else 'std'
     if os.path.exists(out_path):
-      print(f'Found {out_path}...')
       return out_path
     print(f'Creating 8-day {ptype} Aqua/Terra maximum for {year} / {jd}...')
     if not os.path.exists(tmp_dir):

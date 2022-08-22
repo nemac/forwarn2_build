@@ -29,10 +29,6 @@ def build_gdal():
 
 def run_gdal(cmd, volumes=None):
   client = docker.from_env()
-  containers = client.containers.list()
-  if DKR_CONTAINER_NAME in [ c.name for c in containers ]:
-    log.info("Already running!")
-    return
   try:
     container = client.containers.run(DKR_IMAGE_TAG,
         command=cmd,

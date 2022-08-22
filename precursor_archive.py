@@ -108,12 +108,11 @@ class PrecursorArchive:
     try:
       std_path = self._get_file_path(y, jd, nrt=False)
       if os.path.exists(std_path):
-        log.debug(f'Found std file at {std_path}...')
         return std_path, 'std', False
       std_path = self.api.get(y, jd, out_dir=_dir, check=True)
       return std_path, 'std', True
     except DataNotFoundError as e:
-      log.info('No std data available, trying nrt instead...')
+      log.info('No std data available for {y} / {jd}, trying nrt instead...')
       nrt_path = self._get_file_path(y, jd, nrt=True)
       if os.path.exists(nrt_path):
         return nrt_path, 'nrt', False

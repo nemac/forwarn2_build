@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# The entrypoint for the docker context
+
 import sys, os, os.path
 import logging as log
 
