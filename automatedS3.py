@@ -1,10 +1,10 @@
 import rasterio as rio
 import xml.etree.ElementTree as ET
-import os, re, datetime
+import glob, os, re, datetime
 from util import *
 
-#PRECURSORS_DIR = "/path/to/precursors_dir"
-#GRAPH_DATA_DIR = "/path/to/graph_data_dir"
+PRECURSORS_DIR = "/path/to/precursors_dir"
+GRAPH_DATA_DIR = "/path/to/graph_data_dir"
 currentYear = datetime.date.today().year
 NT_regex = re.compile(re.escape(str(currentYear))+'.*NT.*.img$')
 NR_regex = re.compile(re.escape(str(currentYear))+'.*NR.*.img$')
@@ -17,7 +17,11 @@ def getListOfPrecursors():
   # Go through all julian date subdirectories and look for NT and NR precursors
   for juliandate in ALL_MODIS_JULIAN_DAYS:
     jd_dir = os.path.join(PRECURSORS_DIR, juliandate)
-    current_directory_list = os.listdir(jd_dir)
+    current_directory_list = []
+    for file in os.listdir(jd_dir):
+      if NR_regex.match(file) or NT_regex.match(file):
+        current_directory_list.append(file)
+    print(current_directory_list)
     for file in current_directory_list:
       if len(current_directory_list) == 1:
         # We don't know if it is NT or NR so we check both and prioritize NT first
@@ -43,7 +47,8 @@ def getListOfPrecursors():
 
 def build_year_vrt(year):
   print('building year vrt')
-  paths = get_vrt_bands(currentYear)
+  paths = get_vrt_bands(year)
+  print(paths)
   bounds = get_extent(paths)
   big_vrt_name = 'maxMODIS.{}.std.vrt'.format(year)
   print("Generating VRT {}...".format(big_vrt_name))
