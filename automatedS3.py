@@ -3,8 +3,8 @@ import xml.etree.ElementTree as ET
 import glob, os, re, datetime
 from util import *
 
-PRECURSORS_DIR = "/path/to/precursors_dir"
-GRAPH_DATA_DIR = "/path/to/graph_data_dir"
+PRECURSORS_DIR = "./rescaled_precursors"
+GRAPH_DATA_DIR = "./newS3Data"
 currentYear = datetime.date.today().year
 NT_regex = re.compile(re.escape(str(currentYear))+'.*NT.*.img$')
 NR_regex = re.compile(re.escape(str(currentYear))+'.*NR.*.img$')
@@ -21,7 +21,6 @@ def getListOfPrecursors():
     for file in os.listdir(jd_dir):
       if NR_regex.match(file) or NT_regex.match(file):
         current_directory_list.append(file)
-    print(current_directory_list)
     for file in current_directory_list:
       if len(current_directory_list) == 1:
         # We don't know if it is NT or NR so we check both and prioritize NT first
@@ -48,7 +47,6 @@ def getListOfPrecursors():
 def build_year_vrt(year):
   print('building year vrt')
   paths = get_vrt_bands(year)
-  print(paths)
   bounds = get_extent(paths)
   big_vrt_name = 'maxMODIS.{}.std.vrt'.format(year)
   print("Generating VRT {}...".format(big_vrt_name))
@@ -128,10 +126,10 @@ def gdal_translate_vrt(vrt_path, tif_path):
   '''Use gdal_translate to convert a VRT to a GeoTIFF. Used for creating all-year maxes files.
   '''
   print(f'Converting VRT to TIF: {vrt_path} {tif_path}')
-  print(f'Here is the VRT:\n')
-  with open(vrt_path) as f:
-    for line in f.readlines():
-      print(line)
+  #print(f'Here is the VRT:\n')
+  #with open(vrt_path) as f:
+  #  for line in f.readlines():
+  #    print(line)
 
   c = f'''gdal_translate
       -of GTiff
@@ -145,14 +143,35 @@ def gdal_translate_vrt(vrt_path, tif_path):
 
 # main chunk of code
 # Build a new 46-band tif where each band represents an 8-day NDVI maximum.
-vrt_filename = build_year_vrt(currentYear)
-tif_filename = 'maxMODIS.{}.std.tif'.format(currentYear)
-new_tif_path_tmp = os.path.join(GRAPH_DATA_DIR, '{}.tmp'.format(tif_filename))
-gdal_translate_vrt(vrt_filename, new_tif_path_tmp)
-try:
-  os.remove(os.path.join(GRAPH_DATA_DIR, tif_filename))
-except:
-  pass
-# TODO: change PRECURSORS_DIR to something else so it puts it in the right dir (e.g. graph_data)
-os.rename(new_tif_path_tmp, os.path.join(GRAPH_DATA_DIR, tif_filename))
-os.remove(vrt_filename)
+def build_new_tif(dryrun=True):
+  vrt_filename = build_year_vrt(currentYear)
+  tif_filename = 'maxMODIS.{}.std.tif'.format(currentYear)
+  """Check if we need to build a new tif
+  There is some inefficiency and redundancy here but it works
+  Check number of files in list of precursors and if it's the same as the bands
+  Then do nothing since we do not need to build a new tif"""
+  try:
+    number_of_precursors = len(getListOfPrecursors())
+    number_of_bands_in_raster = rio.open(os.path.join(GRAPH_DATA_DIR, tif_filename)).count
+    if (number_of_precursors == number_of_bands_in_raster):
+      print("All precursors are currently in the tif. Number of precursors found: " + str(number_of_precursors))
+      return
+  except:
+    print('check for bands in tif failed. Rebuilding tif')
+    pass
+  new_tif_path_tmp = os.path.join(GRAPH_DATA_DIR, '{}.tmp'.format(tif_filename))
+  if(dryrun):
+    print("was going to create ", vrt_filename, new_tif_path_tmp)
+    return
+  gdal_translate_vrt(vrt_filename, new_tif_path_tmp)
+  try:
+    os.remove(os.path.join(GRAPH_DATA_DIR, tif_filename))
+  except:
+    pass
+  os.rename(new_tif_path_tmp, os.path.join(GRAPH_DATA_DIR, tif_filename))
+  print('removing generated .tmp.aux.xml file')
+  os.remove(os.path.join(GRAPH_DATA_DIR, tif_filename+'.tmp.aux.xml')) # remove the generated .tmp.aux.xml file
+  os.remove(vrt_filename)
+
+if __name__ == "__main__":
+  build_new_tif(dryrun=False)

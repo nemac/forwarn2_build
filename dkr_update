@@ -6,23 +6,25 @@ import sys, os, os.path
 import logging as log
 
 sys.path.append('/build')
-from bulk_maxes import YearMaxesArchive
-from fw2_archive import ForWarn2Archive
-from util import init_log, mail_results, chown_all
+#from bulk_maxes import YearMaxesArchive
+#from fw2_archive import ForWarn2Archive
+#from util import init_log, mail_results, chown_all
+from automatedS3 import build_new_tif
 
 init_log()
 
-bulk_archive = YearMaxesArchive()
-bulk_archive.update(update_precursors=True)
+#bulk_archive = YearMaxesArchive()
+#bulk_archive.update(update_precursors=True, dryrun=True)
+build_new_tif(dryrun=True)
 
-archive = ForWarn2Archive()
-dates = archive.update()
+#archive = ForWarn2Archive()
+#dates = archive.update()
 
-chown_all()
+#chown_all()
 
-if len(dates):
-  log.info('Emailing results...')
-  mail_results(dates)
-else:
-  log.info('No new products...')
+#if len(dates):
+#  log.info('Emailing results...')
+#  mail_results(dates)
+#else:
+#  log.info('No new products...')
 
